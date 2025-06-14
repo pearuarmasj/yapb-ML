@@ -83,6 +83,10 @@ class CS16GameController:
         """Send relative mouse movement"""
         win32api.mouse_event(win32con.MOUSEEVENTF_MOVE, dx, dy, 0, 0)
     
+    def move_mouse(self, dx: int, dy: int):
+        """Alias for send_mouse_move for compatibility"""
+        self.send_mouse_move(dx, dy)
+    
     def execute_action(self, action_vector: np.ndarray, duration: float = 0.05):
         """
         Execute action based on neural network output

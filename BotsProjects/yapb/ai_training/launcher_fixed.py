@@ -93,7 +93,8 @@ if __name__ == "__main__":
         print("⚠️  Warning: Can't find working_ml_bot.py")
         print("Make sure you're running this from the ai_training directory!")
         print()
-      # Ensure data directory exists
+    
+    # Ensure data directory exists
     Path("data").mkdir(exist_ok=True)
     
     try:

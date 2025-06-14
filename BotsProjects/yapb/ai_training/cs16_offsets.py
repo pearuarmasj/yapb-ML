@@ -99,7 +99,6 @@ class CS16OffsetManager:
         self.process = None
         self.process_handle = None
         self.offsets = CS16Offsets()
-        self.hwnd = None
         
     def find_cs16_process(self) -> bool:
         """Find and attach to CS 1.6 process"""
@@ -283,6 +282,46 @@ class CS16OffsetManager:
             print(f"Game state read error: {e}")
         
         return game_state
+    
+    def connect_to_process(self) -> bool:
+        """Connect to CS 1.6 process for memory reading"""
+        return self.find_cs16_process()
+    
+    def get_player_state(self) -> Optional[Dict]:
+        """Get current player state from memory"""
+        try:
+            game_state = self.read_game_state()
+            if game_state:
+                # Convert to the expected format
+                player_state = {}
+                
+                if 'position' in game_state:
+                    player_state['x'] = game_state['position'][0]
+                    player_state['y'] = game_state['position'][1] 
+                    player_state['z'] = game_state['position'][2]
+                
+                if 'velocity' in game_state:
+                    player_state['vel_x'] = game_state['velocity'][0]
+                    player_state['vel_y'] = game_state['velocity'][1]
+                    player_state['vel_z'] = game_state['velocity'][2]
+                
+                if 'angles' in game_state:
+                    player_state['pitch'] = game_state['angles'][0]
+                    player_state['yaw'] = game_state['angles'][1]
+                    player_state['roll'] = game_state['angles'][2]
+                
+                if 'health' in game_state:
+                    player_state['health'] = float(game_state['health'])
+                
+                if 'armor' in game_state:
+                    player_state['armor'] = float(game_state['armor'])
+                
+                return player_state
+            
+        except Exception as e:
+            print(f"Player state error: {e}")
+        
+        return None
     
     def cleanup(self):
         """Cleanup resources"""
