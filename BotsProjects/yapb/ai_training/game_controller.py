@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 CS 1.6 Game Control Interface
-Handles sending keyboard/mouse commands to CS 1.6 for bot control
+Handles sending keyboard/mouse commands to CS 1.6 for bot control using direct injection
 """
 
 import time
@@ -9,14 +9,17 @@ import ctypes
 from ctypes import wintypes
 import win32api
 import win32con
+import win32gui
+import win32process
 import numpy as np
 from typing import Dict, Tuple
 
 class CS16GameController:
-    """Interface for controlling CS 1.6 game through keyboard and mouse input"""
+    """Interface for controlling CS 1.6 game through direct window input injection"""
     
     def __init__(self):
         self.hwnd = None
+        self.process_id = None
         
         # Key codes for CS 1.6 controls
         self.key_codes = {
@@ -31,37 +34,56 @@ class CS16GameController:
             'reload': 0x52,      # R
             'use': 0x45,         # E
         }
-        
-        # Current key states (to avoid key repeat)
+          # Current key states (to avoid key repeat)
         self.key_states = {key: False for key in self.key_codes}
         
+        # Find and connect to CS 1.6
+        self.find_cs16_window()
+    
+    def find_cs16_window(self):
+        """Find CS 1.6 window and get handle"""
+        window_titles = ["Counter-Strike", "Counter-Strike 1.6", "Half-Life"]
+        
+        for title in window_titles:
+            self.hwnd = win32gui.FindWindow(None, title)
+            if self.hwnd:
+                _, self.process_id = win32process.GetWindowThreadProcessId(self.hwnd)
+                print(f"Found CS 1.6 window: {title} (HWND: {self.hwnd}, PID: {self.process_id})")
+                return True
+        
+        print("CS 1.6 window not found!")
+        return False
+    
     def set_window_handle(self, hwnd: int):
         """Set the CS 1.6 window handle"""
         self.hwnd = hwnd
+        if hwnd:
+            _, self.process_id = win32process.GetWindowThreadProcessId(hwnd)
     
     def send_key_down(self, key: str):
-        """Send key down event"""
-        if key not in self.key_codes:
+        """Send key down event directly to CS 1.6 window"""
+        if key not in self.key_codes or not self.hwnd:
             return
             
         if not self.key_states[key]:  # Only send if not already pressed
             keycode = self.key_codes[key]
             
             if key in ['attack1', 'attack2']:
-                # Mouse button
+                # Mouse button - send to window
                 if key == 'attack1':
-                    win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0)
+                    win32api.PostMessage(self.hwnd, win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, 0)
                 else:
-                    win32api.mouse_event(win32con.MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, 0)
+                    win32api.PostMessage(self.hwnd, win32con.WM_RBUTTONDOWN, win32con.MK_RBUTTON, 0)
             else:
-                # Keyboard key
-                win32api.keybd_event(keycode, 0, 0, 0)
+                # Keyboard key - send WM_KEYDOWN directly to window
+                lparam = (1 << 16) | (keycode << 16)  # Proper lparam construction
+                win32api.PostMessage(self.hwnd, win32con.WM_KEYDOWN, keycode, lparam)
             
             self.key_states[key] = True
     
     def send_key_up(self, key: str):
-        """Send key up event"""
-        if key not in self.key_codes:
+        """Send key up event directly to CS 1.6 window"""
+        if key not in self.key_codes or not self.hwnd:
             return
             
         if self.key_states[key]:  # Only send if currently pressed
@@ -70,18 +92,36 @@ class CS16GameController:
             if key in ['attack1', 'attack2']:
                 # Mouse button
                 if key == 'attack1':
-                    win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0, 0, 0)
+                    win32api.PostMessage(self.hwnd, win32con.WM_LBUTTONUP, 0, 0)
                 else:
-                    win32api.mouse_event(win32con.MOUSEEVENTF_RIGHTUP, 0, 0, 0, 0)
+                    win32api.PostMessage(self.hwnd, win32con.WM_RBUTTONUP, 0, 0)
             else:
-                # Keyboard key
-                win32api.keybd_event(keycode, 0, win32con.KEYEVENTF_KEYUP, 0)
+                # Keyboard key - send WM_KEYUP directly to window
+                lparam = (1 << 16) | (1 << 30) | (1 << 31) | (keycode << 16)
+                win32api.PostMessage(self.hwnd, win32con.WM_KEYUP, keycode, lparam)
             
             self.key_states[key] = False
     
     def send_mouse_move(self, dx: int, dy: int):
-        """Send relative mouse movement"""
-        win32api.mouse_event(win32con.MOUSEEVENTF_MOVE, dx, dy, 0, 0)
+        """Send relative mouse movement to CS 1.6 window"""
+        if not self.hwnd:
+            return
+        
+        # Scale movement for CS 1.6 sensitivity
+        scaled_dx = int(dx * 10)  # Increase sensitivity
+        scaled_dy = int(dy * 10)
+        
+        # Get current cursor position relative to window
+        rect = win32gui.GetWindowRect(self.hwnd)
+        center_x = (rect[2] - rect[0]) // 2
+        center_y = (rect[3] - rect[1]) // 2
+        
+        new_x = center_x + scaled_dx
+        new_y = center_y + scaled_dy
+        
+        # Send mouse move message to window
+        lparam = (new_y << 16) | (new_x & 0xFFFF)
+        win32api.PostMessage(self.hwnd, win32con.WM_MOUSEMOVE, 0, lparam)
     
     def move_mouse(self, dx: int, dy: int):
         """Alias for send_mouse_move for compatibility"""

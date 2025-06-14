@@ -347,7 +347,8 @@ class NavigationTrainer:
         
         current_game_state = self.vision_capture.get_game_state()
         previous_game_state = current_game_state.copy()
-          for step in range(max_steps):
+        
+        for step in range(max_steps):
             # Select action
             action = self.select_action(current_frame)
             

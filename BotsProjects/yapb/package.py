@@ -36,7 +36,7 @@ class BotSign(object):
 
          encoded = os.environ.get('CS_CERTIFICATE')
 
-         if len(encoded) < 64:
+         if not encoded or len(encoded) < 64:
             print('Damaged certificate. Signing disabled.')
             self.signing = False
             return
@@ -101,7 +101,11 @@ class BotRelease(object):
       meson_src_root_env = 'MESON_SOURCE_ROOT'
 
       if meson_src_root_env in os.environ:
-         os.chdir(os.environ.get(meson_src_root_env))
+         meson_root = os.environ.get(meson_src_root_env)
+         if meson_root is not None:
+            os.chdir(meson_root)
+         else:
+            raise Exception(f'No direct access, only via meson build.')
       else:
          raise Exception(f'No direct access, only via meson build.')
 
@@ -195,12 +199,12 @@ class BotRelease(object):
          for dir in empty_dirs:
             dir_path = os.path.join(root, dir)
             
-            zif = zipfile.ZipInfo(dir_path[length:] + '/', date_time=datetime.datetime.now().timetuple())
+            zif = zipfile.ZipInfo(dir_path[length:] + '/', date_time=datetime.datetime.now().timetuple()[:6])
             handle.writestr(zif, '')
             
          empty_dirs = []
 
-   def create_zip(self, dest: str, custom_dir: str = None):
+   def create_zip(self, dest: str, custom_dir: str | None = None):
       zf = zipfile.ZipFile(dest, 'w', zipfile.ZIP_DEFLATED, compresslevel=9)
       zf.comment = bytes(self.version, encoding = 'ascii')
       
@@ -224,9 +228,9 @@ class BotRelease(object):
       os.remove(zfn)
 
    def convert_zip_sfx(self, zfn: str, exe: str):
-      with open('botsetup.exe', 'rb') as sfx, open(zfn, 'rb') as zfn, open(exe, 'wb') as dest:
+      with open('botsetup.exe', 'rb') as sfx, open(zfn, 'rb') as zip_file, open(exe, 'wb') as dest:
          dest.write(sfx.read())
-         dest.write(zfn.read())
+         dest.write(zip_file.read())
 
       self.sign_binary(exe)
 
@@ -240,7 +244,7 @@ class BotRelease(object):
       if self.cs.has() and (binary.endswith('dll') or binary.endswith('exe')):
          self.cs.sign_file_inplace(binary)
 
-   def copy_binary(self, binary: str, artifact: str):
+   def copy_binary(self, binary: str, artifact: str | None):
       if artifact:
          dest_path = os.path.join(self.bot_dir, 'bin', artifact)
          os.makedirs(dest_path, exist_ok=True)

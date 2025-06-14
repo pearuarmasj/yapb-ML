@@ -12,6 +12,7 @@ import time
 import subprocess
 import os
 import glob
+import shutil
 
 def automated_pipeline():
     """Run continuous data collection + training"""
