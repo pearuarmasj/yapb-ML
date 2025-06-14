@@ -1,0 +1,7 @@
+timestamp,bot_name,pos_x,pos_y,pos_z,vel_x,vel_y,vel_z,view_yaw,view_pitch,health,armor,is_stuck,is_on_ladder,is_in_water,has_enemy,enemy_pos_x,enemy_pos_y,enemy_pos_z,enemy_distance,enemy_health,enemy_visible,time_since_enemy_seen,team_id,teammates_nearby,enemies_nearby,current_task,hunt_range,aggression_level,target_present,move_forward,move_right,turn_yaw,turn_pitch,attack_primary,attack_secondary,task_switch,jump,duck,walk,confidence,immediate_reward,total_reward
+1198.01,The Muffin Man,2675,2028,-60,0,0,0,0,0,100,0,0,0,0,0,0,0,0,0,0,0,999,0,0,0,0,1024,80,0,1,0,0,0,0,0,0,0,0,0,1,0,0.1
+1198.04,The Muffin Man,2674.73,2027.61,-60,-12.6207,-18.3383,0,-8.24467,0.465095,100,0,0,0,0,0,0,0,0,0,0,0,999,0,0,0,0,1024,80,0,1,0,0,0,0,0,0,0,0,0,1,0,0.1
+1198.06,The Muffin Man,2673.68,2027.29,-60,-32.1963,-6.0251,0,-11.482,2.80885,100,0,0,0,0,0,0,0,0,0,0,0,999,0,0,0,0,1024,80,0,1,0,0,0,0,0,0,0,0,0,1,0,0.1
+1198.09,The Muffin Man,2672.81,2027.25,-60,-41.4869,-1.97948,0,-16.6073,7.98722,100,0,0,0,0,0,0,0,0,0,0,0,999,0,0,0,0,1024,80,0,1,0,0,0,0,0,0,0,0,0,1,0,0.1
+1582.73,The Muffin Man,789.72,2122.2,94.2425,0,0,0,-169.713,-4.23419,75,0,0,0,0,1,470.756,2064.54,121.392,325.268,4923,1,0.0166016,1,2,0,8,1024,80,0,1,0,0,0,0,0,0,0,0,0,1,0,1.17473
+1582.77,The Muffin Man,789.72,2122.2,94.2425,0,0,0,-169.579,-6.05013,75,0,0,0,0,1,451.073,2060.44,132.244,346.324,4923,1,0.0167236,1,2,0,8,1024,80,0,1,0,0,0,0,0,0,0,0,0,1,0,1.15368
