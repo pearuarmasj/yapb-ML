@@ -1,0 +1,6 @@
+/BotsProjects backup/.vscode
+*.code-workspace
+/BotsProjects backup/build/.cmake
+/BotsProjects/.github
+/BotsProjects/.vscode
+/BotsProjects/build/.cmake
