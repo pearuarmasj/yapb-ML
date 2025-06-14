@@ -94,10 +94,10 @@ class DeSurvivorLearner:
     def update_q_table(self, state: str, action: int, reward: float, next_state: str):
         """Update Q-table using Q-learning"""
         if state not in self.q_table:
-            self.q_table[state] = np.zeros(len(self.actions))
+            self.q_table[state] = np.zeros(len(self.actions), dtype=np.float64)
         
         if next_state not in self.q_table:
-            self.q_table[next_state] = np.zeros(len(self.actions))
+            self.q_table[next_state] = np.zeros(len(self.actions), dtype=np.float64)
         
         # Q-learning update
         current_q = self.q_table[state][action]

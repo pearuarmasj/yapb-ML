@@ -19,20 +19,18 @@ class CS16GameController:
     
     def __init__(self):
         self.hwnd = None
-        self.process_id = None
-        
-        # Key codes for CS 1.6 controls
+        self.process_id = None        # Key codes for CS 1.6 controls with scan codes
         self.key_codes = {
-            'forward': 0x57,     # W
-            'backward': 0x53,    # S
-            'left': 0x41,        # A
-            'right': 0x44,       # D
-            'jump': 0x20,        # Space
-            'duck': 0x11,        # Ctrl
-            'attack1': 0x01,     # Left mouse
-            'attack2': 0x02,     # Right mouse
-            'reload': 0x52,      # R
-            'use': 0x45,         # E
+            'forward': (0x57, 0x11),     # W key, scan code 0x11
+            'backward': (0x53, 0x1F),    # S key, scan code 0x1F  
+            'left': (0x41, 0x1E),        # A key, scan code 0x1E
+            'right': (0x44, 0x20),       # D key, scan code 0x20
+            'jump': (0x20, 0x39),        # Space, scan code 0x39
+            'duck': (0x11, 0x1D),        # Ctrl, scan code 0x1D
+            'attack1': (0x01, 0x00),     # Left mouse
+            'attack2': (0x02, 0x00),     # Right mouse
+            'reload': (0x52, 0x13),      # R key, scan code 0x13
+            'use': (0x45, 0x12),         # E key, scan code 0x12
         }
           # Current key states (to avoid key repeat)
         self.key_states = {key: False for key in self.key_codes}
@@ -64,9 +62,8 @@ class CS16GameController:
         """Send key down event directly to CS 1.6 window"""
         if key not in self.key_codes or not self.hwnd:
             return
-            
         if not self.key_states[key]:  # Only send if not already pressed
-            keycode = self.key_codes[key]
+            keycode, scancode = self.key_codes[key]
             
             if key in ['attack1', 'attack2']:
                 # Mouse button - send to window
@@ -75,8 +72,8 @@ class CS16GameController:
                 else:
                     win32api.PostMessage(self.hwnd, win32con.WM_RBUTTONDOWN, win32con.MK_RBUTTON, 0)
             else:
-                # Keyboard key - send WM_KEYDOWN directly to window
-                lparam = (1 << 16) | (keycode << 16)  # Proper lparam construction
+                # Keyboard key - send WM_KEYDOWN directly to window with proper scan code
+                lparam = (1 << 16) | (scancode << 16)
                 win32api.PostMessage(self.hwnd, win32con.WM_KEYDOWN, keycode, lparam)
             
             self.key_states[key] = True
@@ -87,7 +84,7 @@ class CS16GameController:
             return
             
         if self.key_states[key]:  # Only send if currently pressed
-            keycode = self.key_codes[key]
+            keycode, scancode = self.key_codes[key]
             
             if key in ['attack1', 'attack2']:
                 # Mouse button
@@ -97,7 +94,7 @@ class CS16GameController:
                     win32api.PostMessage(self.hwnd, win32con.WM_RBUTTONUP, 0, 0)
             else:
                 # Keyboard key - send WM_KEYUP directly to window
-                lparam = (1 << 16) | (1 << 30) | (1 << 31) | (keycode << 16)
+                lparam = (1 << 16) | (1 << 30) | (1 << 31) | (scancode << 16)
                 win32api.PostMessage(self.hwnd, win32con.WM_KEYUP, keycode, lparam)
             
             self.key_states[key] = False
