@@ -1,9 +1,0 @@
-YaPB Neural AI Training Log
-==============================
-
-timestamp: 2025-06-13T10:16:49.487882
-training_samples: 1090
-unique_bots: 21
-final_loss: 5.745500912229843e-22
-data_timespan: 7.2 - 2918.2
-bot_names: ['Deadlynome', 'Wangmaste', 'rolo123', 'The Muffin Man', 'Major', 'Wigger Vampire', 'goat', 'bobjones', 'Chubbs', 'iamblazed', 'aznfaijai', 'un4given', 'Hextor', 'Sh0oTeR', 'Smok3', 'waeldreegia', 'wiggles', 'Serial_Victim', 'gixsir1000', 'alan_cross2001', 'Anthology']

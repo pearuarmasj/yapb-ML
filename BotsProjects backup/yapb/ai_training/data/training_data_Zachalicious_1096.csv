@@ -1,3 +1,0 @@
-timestamp,bot_name,pos_x,pos_y,pos_z,vel_x,vel_y,vel_z,view_yaw,view_pitch,health,armor,is_stuck,is_on_ladder,is_in_water,has_enemy,enemy_pos_x,enemy_pos_y,enemy_pos_z,enemy_distance,enemy_health,enemy_visible,time_since_enemy_seen,team_id,teammates_nearby,enemies_nearby,current_task,hunt_range,aggression_level,target_present,move_forward,move_right,turn_yaw,turn_pitch,attack_primary,attack_secondary,task_switch,jump,duck,walk,confidence,immediate_reward,total_reward
-1096,Zachalicious,583.671,298.2,68.0312,-300.037,-38.6428,0,20.5,9.54034,75,0,0,0,0,0,0,0,0,0,0,0,999,1,3,0,0,1024,80,0,1,0,0,0,0,0,0,0,0,0,1,0,0.1
-1096.23,Zachalicious,513.232,304.64,68.0312,-298.109,78.5579,0,14.1731,7.22858,75,0,0,0,0,0,0,0,0,0,0,0,999,1,3,0,0,1024,80,0,1,0,0,0,0,0,0,0,0,0,1,0,0.1
