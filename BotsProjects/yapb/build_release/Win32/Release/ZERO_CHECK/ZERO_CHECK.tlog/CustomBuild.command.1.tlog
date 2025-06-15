@@ -1,0 +1,10 @@
+^C:\USERS\PEARU\DOCUMENTS\GITHUB\YAPB-ML\BOTSPROJECTS\YAPB\BUILD_RELEASE\CMAKEFILES\31B69BA28EA896EB217D524A943C2386\GENERATE.STAMP.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/Users/pearu/Documents/GitHub/yapb-ML/BotsProjects/yapb -BC:/Users/pearu/Documents/GitHub/yapb-ML/BotsProjects/yapb/build_release --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file C:/Users/pearu/Documents/GitHub/yapb-ML/BotsProjects/yapb/build_release/yapb.sln
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

@@ -1,0 +1,93 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="C:\Users\pearu\Documents\GitHub\yapb-ML\BotsProjects\yapb\src\analyze.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\pearu\Documents\GitHub\yapb-ML\BotsProjects\yapb\src\botlib.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\pearu\Documents\GitHub\yapb-ML\BotsProjects\yapb\src\chatlib.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\pearu\Documents\GitHub\yapb-ML\BotsProjects\yapb\src\combat.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\pearu\Documents\GitHub\yapb-ML\BotsProjects\yapb\src\config.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\pearu\Documents\GitHub\yapb-ML\BotsProjects\yapb\src\control.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\pearu\Documents\GitHub\yapb-ML\BotsProjects\yapb\src\engine.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\pearu\Documents\GitHub\yapb-ML\BotsProjects\yapb\src\external_control.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\pearu\Documents\GitHub\yapb-ML\BotsProjects\yapb\src\fakeping.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\pearu\Documents\GitHub\yapb-ML\BotsProjects\yapb\src\graph.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\pearu\Documents\GitHub\yapb-ML\BotsProjects\yapb\src\hooks.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\pearu\Documents\GitHub\yapb-ML\BotsProjects\yapb\src\linkage.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\pearu\Documents\GitHub\yapb-ML\BotsProjects\yapb\src\manager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\pearu\Documents\GitHub\yapb-ML\BotsProjects\yapb\src\module.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\pearu\Documents\GitHub\yapb-ML\BotsProjects\yapb\src\message.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\pearu\Documents\GitHub\yapb-ML\BotsProjects\yapb\src\navigate.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\pearu\Documents\GitHub\yapb-ML\BotsProjects\yapb\src\planner.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\pearu\Documents\GitHub\yapb-ML\BotsProjects\yapb\src\practice.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\pearu\Documents\GitHub\yapb-ML\BotsProjects\yapb\src\sounds.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\pearu\Documents\GitHub\yapb-ML\BotsProjects\yapb\src\storage.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\pearu\Documents\GitHub\yapb-ML\BotsProjects\yapb\src\support.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\pearu\Documents\GitHub\yapb-ML\BotsProjects\yapb\src\survival\hazard_detector_clean.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\pearu\Documents\GitHub\yapb-ML\BotsProjects\yapb\src\tasks.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\pearu\Documents\GitHub\yapb-ML\BotsProjects\yapb\src\vision.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\pearu\Documents\GitHub\yapb-ML\BotsProjects\yapb\src\vistable.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="C:\Users\pearu\Documents\GitHub\yapb-ML\BotsProjects\yapb\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="C:\Users\pearu\Documents\GitHub\yapb-ML\BotsProjects\yapb\vc\yapb.rc">
+      <Filter>Source Files</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{798F7ECC-284C-32B2-89F5-C49A62620685}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>
