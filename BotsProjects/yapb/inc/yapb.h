@@ -205,6 +205,7 @@ public:
 class Bot final {
 public:
    friend class BotManager;
+   friend class BotExternalControl;
 
 private:
    mutable Mutex m_pathFindLock {};
@@ -881,6 +882,15 @@ public:
       return BotGraph::instance ().exists (index) && index != m_currentNodeIndex;
    }
 
+   // External control interface functions
+   void enableExternalControl (bool enable);
+   void setExternalMovement (float forward, float side, bool jump, bool duck);
+   void setExternalAngles (const Vector &angles);
+   void setExternalButtons (bool attack1, bool attack2, bool reload);
+   void setExternalWeapon (int weaponId);
+   bool isUnderExternalControl () const { return m_externalControl; }
+   void executeExternalControl ();
+
 private:
    // returns true if bot is using a sniper rifle
    bool usesSniper () const {
@@ -936,6 +946,19 @@ private:
    bool isRecoilHigh () const {
       return pev->punchangle.x < -1.45f;
    }
+
+   // External control interface variables
+   bool m_externalControl {}; // bot is under external control
+   int m_externalButtons {}; // external button commands
+   Vector m_externalAngles {}; // external view angles
+   float m_externalForward {}; // external forward/backward movement (-1 to 1)
+   float m_externalSide {}; // external side movement (-1 to 1)
+   bool m_externalJump {}; // external jump command
+   bool m_externalDuck {}; // external duck command
+   bool m_externalAttack1 {}; // external primary attack
+   bool m_externalAttack2 {}; // external secondary attack
+   bool m_externalReload {}; // external reload command
+   int m_externalWeapon {}; // external weapon selection
 };
 
 #include "config.h"
