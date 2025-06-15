@@ -68,12 +68,27 @@ bool BotExternalControl::checkForCommands () {
       return false;
    }
    
-   // Check for client connection
+   // Check for client connection (non-blocking)
    if (!m_connected) {
+      DWORD mode = PIPE_NOWAIT;
+      SetNamedPipeHandleState(m_pipe, &mode, nullptr, nullptr);
+      
       if (ConnectNamedPipe (m_pipe, nullptr) || GetLastError () == ERROR_PIPE_CONNECTED) {
          m_connected = true;
+         // Reset to blocking mode for data transfer
+         mode = PIPE_WAIT;
+         SetNamedPipeHandleState(m_pipe, &mode, nullptr, nullptr);
       }
       return false;
+   }
+     // Process commands for all externally controlled bots
+   ExternalCommand cmd;
+   if (readCommand(cmd)) {
+      for (const auto &bot : bots) {
+         if (bot && bot->isUnderExternalControl ()) {
+            applyCommandToBot(bot.get(), cmd);
+         }
+      }
    }
    
    return true;
