@@ -14,26 +14,71 @@ import win32process
 import numpy as np
 from typing import Dict, Tuple
 
+# C struct redefinitions for SendInput
+PUL = ctypes.POINTER(ctypes.c_ulong)
+
+class KeyBdInput(ctypes.Structure):
+    _fields_ = [("wVk", ctypes.c_ushort),
+                ("wScan", ctypes.c_ushort),
+                ("dwFlags", ctypes.c_ulong),
+                ("time", ctypes.c_ulong),
+                ("dwExtraInfo", PUL)]
+
+class HardwareInput(ctypes.Structure):
+    _fields_ = [("uMsg", ctypes.c_ulong),
+                ("wParamL", ctypes.c_short),
+                ("wParamH", ctypes.c_ushort)]
+
+class MouseInput(ctypes.Structure):
+    _fields_ = [("dx", ctypes.c_long),
+                ("dy", ctypes.c_long),
+                ("mouseData", ctypes.c_ulong),
+                ("dwFlags", ctypes.c_ulong),
+                ("time", ctypes.c_ulong),
+                ("dwExtraInfo", PUL)]
+
+class Input_I(ctypes.Union):
+    _fields_ = [("ki", KeyBdInput),
+                ("mi", MouseInput),
+                ("hi", HardwareInput)]
+
+class Input(ctypes.Structure):
+    _fields_ = [("type", ctypes.c_ulong),
+                ("ii", Input_I)]
+
 class CS16GameController:
-    """Interface for controlling CS 1.6 game through direct window input injection"""
+    """Interface for controlling CS 1.6 game through direct input injection"""
     
     def __init__(self):
         self.hwnd = None
         self.process_id = None
         
-        # Key codes for CS 1.6 controls with scan codes
+        # Key codes and scan codes for CS 1.6 controls
         self.key_codes = {
-            'forward': (0x57, 0x11),     # W key, scan code 0x11
-            'backward': (0x53, 0x1F),    # S key, scan code 0x1F  
-            'left': (0x41, 0x1E),        # A key, scan code 0x1E
-            'right': (0x44, 0x20),       # D key, scan code 0x20
-            'jump': (0x20, 0x39),        # Space, scan code 0x39
-            'duck': (0x11, 0x1D),        # Ctrl, scan code 0x1D
-            'attack1': (0x01, 0x00),     # Left mouse
-            'attack2': (0x02, 0x00),     # Right mouse
-            'reload': (0x52, 0x13),      # R key, scan code 0x13
-            'use': (0x45, 0x12),         # E key, scan code 0x12
+            'forward': (0x57, 0x11),     # W
+            'backward': (0x53, 0x1F),    # S
+            'left': (0x41, 0x1E),        # A
+            'right': (0x44, 0x20),       # D
+            'jump': (0x20, 0x39),        # Space
+            'duck': (0x11, 0x1D),        # Ctrl
+            'attack1': (0x01, 0),        # Left mouse
+            'attack2': (0x02, 0),        # Right mouse
+            'reload': (0x52, 0x13),      # R
+            'use': (0x45, 0x12),         # E
         }
+        
+        # Constants for SendInput
+        self.KEYEVENTF_KEYUP = 0x0002
+        self.KEYEVENTF_SCANCODE = 0x0008
+        self.INPUT_KEYBOARD = 1
+        self.INPUT_MOUSE = 0
+        
+        # Mouse movement constants
+        self.MOUSEEVENTF_MOVE = 0x0001
+        self.MOUSEEVENTF_LEFTDOWN = 0x0002
+        self.MOUSEEVENTF_LEFTUP = 0x0004
+        self.MOUSEEVENTF_RIGHTDOWN = 0x0008
+        self.MOUSEEVENTF_RIGHTUP = 0x0010
         
         # Current key states (to avoid key repeat)
         self.key_states = {key: False for key in self.key_codes}
@@ -62,67 +107,68 @@ class CS16GameController:
             _, self.process_id = win32process.GetWindowThreadProcessId(hwnd)
     
     def send_key_down(self, key: str):
-        """Send key down event directly to CS 1.6 window"""
-        if key not in self.key_codes or not self.hwnd:
+        """Send key down event using SendInput for direct injection"""
+        if key not in self.key_codes:
             return
             
         if not self.key_states[key]:  # Only send if not already pressed
             keycode, scancode = self.key_codes[key]
             
             if key in ['attack1', 'attack2']:
-                # Mouse button - send to window
+                # Mouse button - use SendInput for mouse
+                extra = ctypes.c_ulong(0)
+                ii_ = Input_I()
                 if key == 'attack1':
-                    win32api.PostMessage(self.hwnd, win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, 0)
+                    ii_.mi = MouseInput(0, 0, 0, self.MOUSEEVENTF_LEFTDOWN, 0, ctypes.pointer(extra))
                 else:
-                    win32api.PostMessage(self.hwnd, win32con.WM_RBUTTONDOWN, win32con.MK_RBUTTON, 0)
+                    ii_.mi = MouseInput(0, 0, 0, self.MOUSEEVENTF_RIGHTDOWN, 0, ctypes.pointer(extra))
+                x = Input(ctypes.c_ulong(self.INPUT_MOUSE), ii_)
+                ctypes.windll.user32.SendInput(1, ctypes.pointer(x), ctypes.sizeof(x))
             else:
-                # Keyboard key - send WM_KEYDOWN directly to window with proper scan code
-                lparam = (1 << 16) | (scancode << 16)
-                win32api.PostMessage(self.hwnd, win32con.WM_KEYDOWN, keycode, lparam)
+                # Keyboard key - use SendInput for direct injection
+                extra = ctypes.c_ulong(0)
+                ii_ = Input_I()
+                ii_.ki = KeyBdInput(0, scancode, self.KEYEVENTF_SCANCODE, 0, ctypes.pointer(extra))
+                x = Input(ctypes.c_ulong(self.INPUT_KEYBOARD), ii_)
+                ctypes.windll.user32.SendInput(1, ctypes.pointer(x), ctypes.sizeof(x))
             
             self.key_states[key] = True
     
     def send_key_up(self, key: str):
-        """Send key up event directly to CS 1.6 window"""
-        if key not in self.key_codes or not self.hwnd:
+        """Send key up event using SendInput for direct injection"""
+        if key not in self.key_codes:
             return
             
         if self.key_states[key]:  # Only send if currently pressed
             keycode, scancode = self.key_codes[key]
             
             if key in ['attack1', 'attack2']:
-                # Mouse button
+                # Mouse button - use SendInput for mouse
+                extra = ctypes.c_ulong(0)
+                ii_ = Input_I()
                 if key == 'attack1':
-                    win32api.PostMessage(self.hwnd, win32con.WM_LBUTTONUP, 0, 0)
+                    ii_.mi = MouseInput(0, 0, 0, self.MOUSEEVENTF_LEFTUP, 0, ctypes.pointer(extra))
                 else:
-                    win32api.PostMessage(self.hwnd, win32con.WM_RBUTTONUP, 0, 0)
+                    ii_.mi = MouseInput(0, 0, 0, self.MOUSEEVENTF_RIGHTUP, 0, ctypes.pointer(extra))
+                x = Input(ctypes.c_ulong(self.INPUT_MOUSE), ii_)
+                ctypes.windll.user32.SendInput(1, ctypes.pointer(x), ctypes.sizeof(x))
             else:
-                # Keyboard key - send WM_KEYUP directly to window
-                lparam = (1 << 16) | (1 << 30) | (1 << 31) | (scancode << 16)
-                win32api.PostMessage(self.hwnd, win32con.WM_KEYUP, keycode, lparam)
+                # Keyboard key - use SendInput for direct injection
+                extra = ctypes.c_ulong(0)
+                ii_ = Input_I()
+                ii_.ki = KeyBdInput(0, scancode, self.KEYEVENTF_SCANCODE | self.KEYEVENTF_KEYUP, 0, ctypes.pointer(extra))
+                x = Input(ctypes.c_ulong(self.INPUT_KEYBOARD), ii_)
+                ctypes.windll.user32.SendInput(1, ctypes.pointer(x), ctypes.sizeof(x))
             
             self.key_states[key] = False
     
     def send_mouse_move(self, dx: int, dy: int):
-        """Send relative mouse movement to CS 1.6 window"""
-        if not self.hwnd:
-            return
-        
-        # Scale movement for CS 1.6 sensitivity
-        scaled_dx = int(dx * 10)  # Increase sensitivity
-        scaled_dy = int(dy * 10)
-        
-        # Get current cursor position relative to window
-        rect = win32gui.GetWindowRect(self.hwnd)
-        center_x = (rect[2] - rect[0]) // 2
-        center_y = (rect[3] - rect[1]) // 2
-        
-        new_x = center_x + scaled_dx
-        new_y = center_y + scaled_dy
-        
-        # Send mouse move message to window
-        lparam = (new_y << 16) | (new_x & 0xFFFF)
-        win32api.PostMessage(self.hwnd, win32con.WM_MOUSEMOVE, 0, lparam)
+        """Send relative mouse movement using SendInput"""
+        extra = ctypes.c_ulong(0)
+        ii_ = Input_I()
+        ii_.mi = MouseInput(dx, dy, 0, self.MOUSEEVENTF_MOVE, 0, ctypes.pointer(extra))
+        x = Input(ctypes.c_ulong(self.INPUT_MOUSE), ii_)
+        ctypes.windll.user32.SendInput(1, ctypes.pointer(x), ctypes.sizeof(x))
     
     def move_mouse(self, dx: int, dy: int):
         """Alias for send_mouse_move for compatibility"""
