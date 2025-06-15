@@ -3160,12 +3160,6 @@ void Bot::executeExternalControl () {
 
 // Bot main frame function - called every frame by BotManager
 void Bot::frame () {
-   // Critical frame update - this makes bots functional
-   
-   // Update frame timing
-   m_frameInterval = game.time() - m_previousThinkTime;
-   m_previousThinkTime = game.time();
-   
    // Check if bot is under external control
    if (m_externalControl) {
       // Execute external control commands instead of normal AI
@@ -3173,22 +3167,9 @@ void Bot::frame () {
       return;
    }
    
-   // Basic bot behavior - minimal implementation to make them work
-   // Update basic bot state
-   m_isAlive = (pev->health > 0.0f && pev->deadflag == DEAD_NO);
-   
-   // Handle team joining for new bots
-   updateTeamJoin();
-   
-   // Run basic movement
-   runMovement();
-   
-   // Process basic AI tasks
-   if (m_isAlive) {
-      // Basic alive bot behavior
-      checkMsgQueue();
-      updateHearing();
-   }
+   // Normal bot AI logic would go here
+   // For now, this is where the original bot AI would be called
+   // TODO: Implement or call existing bot AI logic
 }
 
 void Bot::logic () {
@@ -3215,19 +3196,6 @@ void Bot::updateHearing () {
 }
 
 void Bot::runMovement () {
-   // Skip if under external control
-   if (m_externalControl) {
-      return;
-   }
-   
-   // Basic movement logic - this is critical for bot functionality
-   // Call the original movement system that should be implemented elsewhere
-   // For now, just run basic movement to make bots functional
-   
-   // Set default movement if no external control
-   pev->button = 0;
-   m_moveSpeed = 0.0f;
-   m_strafeSpeed = 0.0f;
 }
 
 void Bot::selectCampButtons (int index) {
@@ -3252,34 +3220,27 @@ void Bot::dropWeaponForUser (edict_t *user, bool discardC4) {
 }
 
 void Bot::spawned () {
-   pev->flags &= ~(FL_DORMANT | FL_SPECTATOR);
-   pev->flags |= FL_CLIENT | FL_FAKECLIENT;
-   pev->deadflag = DEAD_NO;
-   pev->movetype = MOVETYPE_WALK;
-   pev->view_ofs = Vector (0, 0, 28.0f); // Standard CS player view offset
-   pev->health = 100;
-   pev->max_health = 100;
-   pev->armorvalue = 0;
-   pev->takedamage = DAMAGE_AIM;
-   pev->sequence = 0;
-   pev->gaitsequence = 1;
-   m_notStarted = false;
-   m_isStale = false;
-   updateTeamJoin ();
-   m_currentWeapon = -1;
-   m_currentTravelFlags = 0;
-   m_currentNodeIndex = kInvalidNodeIndex;
-   m_targetEntity = nullptr;
-   m_enemy = nullptr;
-   m_lastEnemy = nullptr;
-   m_lastEnemyOrigin = Vector (0, 0, 0);
-   m_trackingEdict = nullptr;
-   m_timeNextTracking = 0.0f;
-   m_buttonPushTime = 0.0f;
-   m_enemyUpdateTime = 0.0f;
-   m_seeEnemyTime = 0.0f;
-   m_shootAtDeadTime = 0.0f;
-   m_oldCombatDesire = 0.0f;
-   m_liftUsageTime = 0.0f;
-   clearTasks ();
+}
+
+void Bot::refreshCreatureStatus (char *infobuffer) {
+}
+
+void Bot::sendBotToOrigin (const Vector &origin) {
+}
+
+void Bot::enteredBuyZone (int buyState) {
+}
+
+void Bot::takeDamage (edict_t *inflictor, int damage, int armor, int bits) {
+}
+
+void Bot::takeBlind (int alpha) {
+}
+
+Vector Bot::isBombAudible () {
+   return Vector (0, 0, 0);
+}
+
+float Bot::getBombTimeleft () const {
+   return 0.0f;
 }
