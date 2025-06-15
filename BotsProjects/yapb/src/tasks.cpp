@@ -46,7 +46,6 @@ void Bot::normal_ () {
    }
 
    // bots rushing with knife, when have no enemy (thanks for idea to nicebot project)
-   // BUT NOT HUMANS IN ZOMBIE MODE!
    if (cv_random_knife_attacks
       && usesKnife ()
       && (game.isNullEntity (m_lastEnemy) || !util.isAlive (m_lastEnemy))
@@ -54,8 +53,7 @@ void Bot::normal_ () {
       && m_knifeAttackTime < game.time ()
       && !m_hasHostage
       && !hasShield ()
-      && numFriendsNear (pev->origin, 96.0f) == 0
-      && !(game.is (GameFlags::ZombieMod) && !m_isCreature)) { // NO KNIFE ATTACKS FOR HUMANS IN ZOMBIE MODE
+      && numFriendsNear (pev->origin, 96.0f) == 0) {
 
       if (rg.chance (40)) {
          pev->button |= IN_ATTACK;
@@ -1412,8 +1410,7 @@ void Bot::escapeFromBomb_ () {
       pev->button |= IN_ATTACK2;
    }
 
-   if (!usesKnife () && game.isNullEntity (m_enemy) && !util.isAlive (m_lastEnemy) 
-       && !(game.is (GameFlags::ZombieMod) && !m_isCreature)) { // NO KNIVES FOR HUMANS IN ZOMBIE MODE
+   if (!usesKnife () && game.isNullEntity (m_enemy) && !util.isAlive (m_lastEnemy)) {
       selectWeaponById (Weapon::Knife);
    }
 
@@ -1470,16 +1467,8 @@ void Bot::escapeFromBomb_ () {
 
 void Bot::shootBreakable_ () {
 
-   // ENHANCED breakable destroyed checks
-   if (!util.isBreakableEntity (m_breakableEntity) || 
-       game.isNullEntity (m_breakableEntity) ||
-       m_breakableEntity->v.health <= 0.0f ||
-       (m_breakableEntity->v.effects & EF_NODRAW) ||
-       m_breakableEntity->v.takedamage == DAMAGE_NO) {
-      
-      // breakable is destroyed or invalid - clean up and complete task
-      m_breakableEntity = nullptr;
-      m_breakableOrigin.clear ();
+   // breakable destroyed?
+   if (!util.isBreakableEntity (m_breakableEntity)) {
       completeTask ();
       return;
    }
@@ -1487,33 +1476,12 @@ void Bot::shootBreakable_ () {
       TraceResult tr {};
       game.testLine (pev->origin, m_breakableOrigin, TraceIgnore::Monsters , ent (), &tr);
 
-      // if trace doesn't hit our breakable, it might be destroyed or blocked
       if (tr.pHit != m_breakableEntity && !cr::fequal (tr.flFraction, 1.0f)) {
          m_ignoredBreakable.push (tr.pHit);
 
          m_breakableEntity = nullptr;
-         m_breakableOrigin.clear ();
+         m_breakableOrigin = nullptr;
 
-         completeTask ();
-         return;
-      }
-      
-      // ADDITIONAL CHECK: if breakable is too far, give up
-      const float distToBreakable = pev->origin.distance (m_breakableOrigin);
-      if (distToBreakable > 400.0f) {
-         m_ignoredBreakable.push (m_breakableEntity);
-         m_breakableEntity = nullptr;
-         m_breakableOrigin.clear ();
-         completeTask ();
-         return;
-      }
-      
-      // TIME-BASED SHOOTING LIMIT: don't shoot same breakable forever
-      if (m_breakableTime > 0.0f && game.time () - m_breakableTime > 5.0f) {
-         // been shooting for too long, give up
-         m_ignoredBreakable.push (m_breakableEntity);
-         m_breakableEntity = nullptr;
-         m_breakableOrigin.clear ();
          completeTask ();
          return;
       }

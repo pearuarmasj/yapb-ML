@@ -1240,48 +1240,13 @@ void Bot::fireWeapons () {
    const auto tab = conf.getRawWeapons ();
    const auto weapons = pev->weapons;
 
-   // FORCE HUMANS TO SWITCH AWAY FROM KNIVES WHEN ALREADY EQUIPPED AND FACING ZOMBIES!
-   if (!m_isCreature && game.is (GameFlags::ZombieMod) && m_currentWeapon == Weapon::Knife) {
-      bool zombiesDetected = false;
-      
-      if (!game.isNullEntity (m_enemy)) {
-         Bot *enemyBot = bots[m_enemy];
-         zombiesDetected = (enemyBot && enemyBot->m_isCreature) || 
-                          (m_enemy->v.model.str ().contains ("zo"));
-      }
-      else if (!game.isNullEntity (m_lastEnemy)) {
-         Bot *enemyBot = bots[m_lastEnemy];
-         zombiesDetected = (enemyBot && enemyBot->m_isCreature) || 
-                          (m_lastEnemy->v.model.str ().contains ("zo"));
-      }
-      
-      if (zombiesDetected) {
-         // immediately force switch to best available gun instead of knife
-         selectBestWeapon ();
-         return;
-      }
-   }
-
-   // if knife mode use knife only - BUT NOT AGAINST ZOMBIES!
+   // if knife mode use knife only
    if (isKnifeMode ()) {
-      // PREVENT HUMANS FROM USING KNIVES AGAINST ZOMBIES
-      if (!m_isCreature && game.is (GameFlags::ZombieMod) && !game.isNullEntity (m_enemy)) {
-         Bot *enemyBot = bots[m_enemy];
-         bool enemyIsZombie = (enemyBot && enemyBot->m_isCreature) || 
-                             (m_enemy->v.model.str ().contains ("zo"));
-         
-         if (enemyIsZombie) {
-            // force switch to best available ranged weapon instead of knife
-            selectBestWeapon ();
-            return;
-         }
-      }
-      
       selectWeapons (distance, selectIndex, selectId, choosenWeapon);
       return;
    }
 
-   // use knife if near and good difficulty (l33t dude!) - BUT NOT HUMANS IN ZOMBIE MODE!
+   // use knife if near and good difficulty (l33t dude!)
    if (!game.is (GameFlags::ZombieMod)
       && cv_stab_close_enemies
       && m_difficulty >= Difficulty::Normal
@@ -1293,18 +1258,6 @@ void Bot::fireWeapons () {
 
       selectWeapons (distance, selectIndex, selectId, choosenWeapon);
       return;
-   }
-   
-   // ADDITIONAL ZOMBIE PROTECTION: Never let humans use knives in zombie mode
-   if (!m_isCreature && game.is (GameFlags::ZombieMod) && !game.isNullEntity (m_enemy)) {
-      Bot *enemyBot = bots[m_enemy];
-      bool enemyIsZombie = (enemyBot && enemyBot->m_isCreature) || 
-                          (m_enemy->v.model.str ().contains ("zo"));
-      
-      if (enemyIsZombie && selectId == Weapon::Knife) {
-         selectId = Weapon::USP; // force fallback to pistol or any gun
-         selectIndex = 1; // start from pistols
-      }
    }
 
    // loop through all the weapons until terminator is found...
@@ -1486,92 +1439,6 @@ void Bot::attackMovement () {
 
    // only take cover when bomb is not planted and enemy can see the bot or the bot is VIP
    if (!game.is (GameFlags::CSDM) && !isKnifeMode ()) {
-      
-      // HUMANS RETREAT FROM ZOMBIES - immediate retreat behavior with cliff safety
-      if (!m_isCreature && game.is (GameFlags::ZombieMod) && !game.isNullEntity (m_enemy)) {
-         Bot *enemyBot = bots[m_enemy];
-         bool enemyIsZombie = (enemyBot && enemyBot->m_isCreature) || 
-                             (m_enemy->v.model.str ().contains ("zo"));
-         
-         if (enemyIsZombie) {
-            const float zombieDistance = distanceSq; // use existing distance calculation
-            const float retreatDistanceSq = cr::sqrf (cv_zombie_hunt_range.as <float> () * 0.7f);
-            
-            // humans should ALWAYS retreat from zombies when they get close
-            if (zombieDistance <= retreatDistanceSq) {
-               // ENHANCED CLIFF SAFETY FOR ZOMBIE RETREAT
-               bool safeToRetreat = false; // start pessimistic
-               
-               // COMPREHENSIVE BACKWARDS MOVEMENT SAFETY CHECK
-               Vector right {}, forward {};
-               pev->v_angle.angleVectors (&forward, &right, nullptr);
-               
-               // predict retreat movement and check for cliffs
-               const auto &backwardMove = -forward * pev->maxspeed * 0.3f;
-               const auto &potentialRetreatPos = pev->origin + backwardMove + pev->velocity * m_frameInterval;
-               
-               // multi-layer safety checks
-               if (!checkWallOnBehind (120.0f) && // increased safety distance
-                   !isNotSafeToMove (potentialRetreatPos) && 
-                   !isDeadlyMove (potentialRetreatPos) &&
-                   !isInWater () && !isOnLadder ()) { // extra safety
-                  safeToRetreat = true;
-               }
-               
-               if (safeToRetreat) {
-                  // safe to retreat backwards
-                  m_moveSpeed = -pev->maxspeed;
-                  m_fightStyle = Fight::Strafe;
-               }
-               else {
-                  // FORCE NO BACKWARDS MOVEMENT - use safe alternative
-                  m_moveSpeed = 0.0f; // absolutely no backwards movement
-                  m_fightStyle = Fight::Strafe; // enable strafing to escape sideways
-                  
-                  // try to strafe away from zombie if safe
-                  const auto &toZombie = (m_enemy->v.origin - pev->origin).normalize2d_apx ();
-                  const auto &rightSide = pev->v_angle.right ().normalize2d_apx ();
-                  
-                  // determine safer strafe direction
-                  bool strafeRight = (toZombie | rightSide) < 0.0f;
-                  float strafeDirection = strafeRight ? pev->maxspeed : -pev->maxspeed;
-                  
-                  // check if strafe direction is safe
-                  Vector strafeMove = rightSide * strafeDirection * 0.3f;
-                  Vector strafeDest = pev->origin + strafeMove + pev->velocity * m_frameInterval;
-                  
-                  if (!isNotSafeToMove (strafeDest) && !isDeadlyMove (strafeDest)) {
-                     m_strafeSpeed = strafeDirection;
-                  }
-                  else {
-                     // try opposite strafe direction
-                     strafeDirection = -strafeDirection;
-                     strafeMove = rightSide * strafeDirection * 0.3f;
-                     strafeDest = pev->origin + strafeMove + pev->velocity * m_frameInterval;
-                     
-                     if (!isNotSafeToMove (strafeDest) && !isDeadlyMove (strafeDest)) {
-                        m_strafeSpeed = strafeDirection;
-                     }
-                     else {
-                        // no safe strafe direction - stay put and fight (no movement at all)
-                        m_strafeSpeed = 0.0f;
-                        m_moveSpeed = 0.0f; // ensure absolutely no movement
-                        m_fightStyle = Fight::Stay;
-                     }
-                  }
-               }
-               
-               m_retreatTime = game.time () + 3.0f; // retreat for 3 seconds
-               
-               // force seek cover task if not already retreating
-               if (getCurrentTaskId () != Task::SeekCover) {
-                  startTask (Task::SeekCover, TaskPri::SeekCover, kInvalidNodeIndex, 0.0f, true);
-               }
-               return; // skip normal attack movement logic
-            }
-         }
-      }
-      
       if ((m_states & Sense::SeeingEnemy)
          && approach < 30
          && !bots.isBombPlanted ()
@@ -1775,8 +1642,7 @@ void Bot::attackMovement () {
       m_duckTime = game.time () - 1.0f;
    }
 
-   // ENHANCED CLIFF SAFETY - handle backward movement (especially for zombie retreat)
-   if (!isInWater () && !isOnLadder () && (cr::abs(m_moveSpeed) > 0.0f || cr::abs(m_strafeSpeed) > 0.0f)) {
+   if (!isInWater () && !isOnLadder () && (m_moveSpeed > 0.0f || m_strafeSpeed > 0.0f)) {
       Vector right {}, forward {};
       pev->v_angle.angleVectors (&forward, &right, nullptr);
 
@@ -1784,45 +1650,9 @@ void Bot::attackMovement () {
       const auto &side = right * m_strafeSpeed * 0.2f;
       const auto &spot = pev->origin + front + side + pev->velocity * m_frameInterval;
 
-      if (isNotSafeToMove (spot) || isDeadlyMove (spot)) {
-         // CRITICAL: if ANY movement would be unsafe, STOP ALL MOVEMENT
-         if (m_moveSpeed < 0.0f) {
-            // unsafe backward movement - FORCE STOP and prevent any backwards movement
-            m_moveSpeed = 0.0f;
-            
-            // if retreating from zombies, try safe strafe instead
-            if (!m_isCreature && game.is (GameFlags::ZombieMod) && !game.isNullEntity (m_enemy)) {
-               Bot *enemyBot = bots[m_enemy];
-               bool enemyIsZombie = (enemyBot && enemyBot->m_isCreature) || 
-                                   (m_enemy->v.model.str ().contains ("zo"));
-               
-               if (enemyIsZombie && cr::abs(m_strafeSpeed) == 0.0f) {
-                  // try safe strafe movement away from zombie
-                  const auto &toZombie = (m_enemy->v.origin - pev->origin).normalize2d_apx ();
-                  const auto &rightDir = pev->v_angle.right ().normalize2d_apx ();
-                  
-                  float strafeDir = (toZombie | rightDir) < 0.0f ? pev->maxspeed : -pev->maxspeed;
-                  Vector strafeSpot = pev->origin + rightDir * strafeDir * 0.2f + pev->velocity * m_frameInterval;
-                  
-                  if (!isNotSafeToMove (strafeSpot) && !isDeadlyMove (strafeSpot)) {
-                     m_strafeSpeed = strafeDir;
-                  }
-                  else {
-                     // even strafe is unsafe - NO MOVEMENT AT ALL
-                     m_strafeSpeed = 0.0f;
-                  }
-               }
-            }
-         }
-         else {
-            // forward/strafe movement unsafe - reverse as before but be more conservative
-            if (cr::abs(m_strafeSpeed) > 0.0f) {
-               m_strafeSpeed = -m_strafeSpeed * 0.5f; // reduce speed when reversing
-            }
-            if (m_moveSpeed > 0.0f) {
-               m_moveSpeed = -m_moveSpeed * 0.5f; // reduce speed when reversing
-            }
-         }
+      if (isNotSafeToMove (spot)) {
+         m_strafeSpeed = -m_strafeSpeed;
+         m_moveSpeed = -m_moveSpeed;
 
          pev->button &= ~IN_JUMP;
       }
@@ -2009,36 +1839,10 @@ void Bot::selectBestWeapon () {
    // this function chooses best weapon, from weapons that bot currently own, and change
    // current weapon to best one.
 
-   // if knife mode activated, force bot to use knife - BUT NOT HUMANS AGAINST ZOMBIES!
+   // if knife mode activated, force bot to use knife
    if (isKnifeMode ()) {
-      // PREVENT HUMANS FROM SELECTING KNIVES AGAINST ZOMBIES
-      if (!m_isCreature && game.is (GameFlags::ZombieMod)) {
-         // check if any enemies are zombies
-         bool zombiesNearby = false;
-         if (!game.isNullEntity (m_enemy)) {
-            Bot *enemyBot = bots[m_enemy];
-            zombiesNearby = (enemyBot && enemyBot->m_isCreature) || 
-                           (m_enemy->v.model.str ().contains ("zo"));
-         }
-         else if (!game.isNullEntity (m_lastEnemy)) {
-            Bot *enemyBot = bots[m_lastEnemy];
-            zombiesNearby = (enemyBot && enemyBot->m_isCreature) || 
-                           (m_lastEnemy->v.model.str ().contains ("zo"));
-         }
-         
-         // if zombies detected, skip knife and find best ranged weapon
-         if (zombiesNearby) {
-            // skip the knife selection, continue to weapon selection logic below
-         }
-         else {
-            selectWeaponById (Weapon::Knife);
-            return;
-         }
-      }
-      else {
-         selectWeaponById (Weapon::Knife);
-         return;
-      }
+      selectWeaponById (Weapon::Knife);
+      return;
    }
 
    if (m_isReloading) {
@@ -2787,29 +2591,6 @@ void Bot::selectWeaponByIndex (int index) {
 }
 
 void Bot::selectWeaponById (int id) {
-   // HUMANS SHOULD NEVER USE KNIVES AGAINST ZOMBIES!
-   if (id == Weapon::Knife && !m_isCreature && game.is (GameFlags::ZombieMod)) {
-      // check if zombies are nearby or we have zombie enemies
-      bool zombiesDetected = false;
-      
-      if (!game.isNullEntity (m_enemy)) {
-         Bot *enemyBot = bots[m_enemy];
-         zombiesDetected = (enemyBot && enemyBot->m_isCreature) || 
-                          (m_enemy->v.model.str ().contains ("zo"));
-      }
-      else if (!game.isNullEntity (m_lastEnemy)) {
-         Bot *enemyBot = bots[m_lastEnemy];
-         zombiesDetected = (enemyBot && enemyBot->m_isCreature) || 
-                          (m_lastEnemy->v.model.str ().contains ("zo"));
-      }
-      
-      if (zombiesDetected) {
-         // force switch to best available gun instead of knife
-         selectBestWeapon ();
-         return;
-      }
-   }
-   
    const auto &prop = conf.getWeaponProp (id);
    issueCommand (prop.classname.chars ());
 }

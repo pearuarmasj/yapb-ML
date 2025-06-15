@@ -5,7 +5,6 @@ C:\Users\pearu\Documents\GitHub\yapb-ML\BotsProjects\yapb\src\combat.cpp;C:\User
 C:\Users\pearu\Documents\GitHub\yapb-ML\BotsProjects\yapb\src\config.cpp;C:\Users\pearu\Documents\GitHub\yapb-ML\BotsProjects\yapb\build_release\yapb.dir\Release\config.obj
 C:\Users\pearu\Documents\GitHub\yapb-ML\BotsProjects\yapb\src\control.cpp;C:\Users\pearu\Documents\GitHub\yapb-ML\BotsProjects\yapb\build_release\yapb.dir\Release\control.obj
 C:\Users\pearu\Documents\GitHub\yapb-ML\BotsProjects\yapb\src\engine.cpp;C:\Users\pearu\Documents\GitHub\yapb-ML\BotsProjects\yapb\build_release\yapb.dir\Release\engine.obj
-C:\Users\pearu\Documents\GitHub\yapb-ML\BotsProjects\yapb\src\external_control.cpp;C:\Users\pearu\Documents\GitHub\yapb-ML\BotsProjects\yapb\build_release\yapb.dir\Release\external_control.obj
 C:\Users\pearu\Documents\GitHub\yapb-ML\BotsProjects\yapb\src\fakeping.cpp;C:\Users\pearu\Documents\GitHub\yapb-ML\BotsProjects\yapb\build_release\yapb.dir\Release\fakeping.obj
 C:\Users\pearu\Documents\GitHub\yapb-ML\BotsProjects\yapb\src\graph.cpp;C:\Users\pearu\Documents\GitHub\yapb-ML\BotsProjects\yapb\build_release\yapb.dir\Release\graph.obj
 C:\Users\pearu\Documents\GitHub\yapb-ML\BotsProjects\yapb\src\hooks.cpp;C:\Users\pearu\Documents\GitHub\yapb-ML\BotsProjects\yapb\build_release\yapb.dir\Release\hooks.obj
@@ -19,7 +18,6 @@ C:\Users\pearu\Documents\GitHub\yapb-ML\BotsProjects\yapb\src\practice.cpp;C:\Us
 C:\Users\pearu\Documents\GitHub\yapb-ML\BotsProjects\yapb\src\sounds.cpp;C:\Users\pearu\Documents\GitHub\yapb-ML\BotsProjects\yapb\build_release\yapb.dir\Release\sounds.obj
 C:\Users\pearu\Documents\GitHub\yapb-ML\BotsProjects\yapb\src\storage.cpp;C:\Users\pearu\Documents\GitHub\yapb-ML\BotsProjects\yapb\build_release\yapb.dir\Release\storage.obj
 C:\Users\pearu\Documents\GitHub\yapb-ML\BotsProjects\yapb\src\support.cpp;C:\Users\pearu\Documents\GitHub\yapb-ML\BotsProjects\yapb\build_release\yapb.dir\Release\support.obj
-C:\Users\pearu\Documents\GitHub\yapb-ML\BotsProjects\yapb\src\survival\hazard_detector_clean.cpp;C:\Users\pearu\Documents\GitHub\yapb-ML\BotsProjects\yapb\build_release\yapb.dir\Release\hazard_detector_clean.obj
 C:\Users\pearu\Documents\GitHub\yapb-ML\BotsProjects\yapb\src\tasks.cpp;C:\Users\pearu\Documents\GitHub\yapb-ML\BotsProjects\yapb\build_release\yapb.dir\Release\tasks.obj
 C:\Users\pearu\Documents\GitHub\yapb-ML\BotsProjects\yapb\src\vision.cpp;C:\Users\pearu\Documents\GitHub\yapb-ML\BotsProjects\yapb\build_release\yapb.dir\Release\vision.obj
 C:\Users\pearu\Documents\GitHub\yapb-ML\BotsProjects\yapb\src\vistable.cpp;C:\Users\pearu\Documents\GitHub\yapb-ML\BotsProjects\yapb\build_release\yapb.dir\Release\vistable.obj

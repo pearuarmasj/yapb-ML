@@ -22,9 +22,6 @@
     <ClCompile Include="C:\Users\pearu\Documents\GitHub\yapb-ML\BotsProjects\yapb\src\engine.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="C:\Users\pearu\Documents\GitHub\yapb-ML\BotsProjects\yapb\src\external_control.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="C:\Users\pearu\Documents\GitHub\yapb-ML\BotsProjects\yapb\src\fakeping.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -62,9 +59,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="C:\Users\pearu\Documents\GitHub\yapb-ML\BotsProjects\yapb\src\support.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="C:\Users\pearu\Documents\GitHub\yapb-ML\BotsProjects\yapb\src\survival\hazard_detector_clean.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="C:\Users\pearu\Documents\GitHub\yapb-ML\BotsProjects\yapb\src\tasks.cpp">

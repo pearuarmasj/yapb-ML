@@ -127,10 +127,6 @@ struct BotTeamData {
 #include <graph.h>
 #include <vision.h>
 
-// forward declare external control class
-void initExternalControl ();
-void checkExternalControlCommands ();
-
 // this structure links nodes returned from pathfinder
 class PathWalk final : public NonCopyable {
 private:
@@ -209,7 +205,6 @@ public:
 class Bot final {
 public:
    friend class BotManager;
-   friend class BotExternalControl;
 
 private:
    mutable Mutex m_pathFindLock {};
@@ -383,21 +378,6 @@ private:
    CountdownTimer m_fixFallTimer {}; // timer we're fixed fall last time
    CountdownTimer m_repathTimer {}; // bots is going to repath his route
 
-   // Neural network integration members
-   static void *s_dataCollector;  // Simplified for now
-   static void *s_neuralAI;       // Simplified for now
-   
-   // TODO: Add back when structs are properly defined
-   // struct ZombieTrainingState m_lastState;
-   // struct ZombieTrainingAction m_lastAction;
-   float m_lastRewardCalculation {};
-   
-   // Neural network decision tracking
-   bool m_useNeuralDecisions {};
-   float m_neuralConfidenceThreshold {};
-   int m_neuralDecisionCount {};
-   int m_ruleBasedDecisionCount {};
-
 private:
    int pickBestWeapon (Array <int> &vec, int moneySave) const;
    int getRandomCampDir ();
@@ -487,12 +467,7 @@ private:
    bool isCreature () const;
    bool isPreviousLadder () const;
    bool isIgnoredItem (edict_t *ent);
-   bool handleBreakableEffectively (); // Better handling of breakables like bridges
-   
-   void zombieHuntingAI ();
-   void neuralZombieLogic ();  // Neural network enhanced zombie AI
-   void collectTrainingData (); // Collect data for neural network training
-   void executeNeuralAction (const struct ZombieTrainingAction &action); // Execute neural network decisions
+
    void doPlayerAvoidance (const Vector &normal);
    void selectCampButtons (int index);
    void instantChatter (int type) const;
@@ -552,7 +527,7 @@ private:
    void updatePredictedIndex ();
    void refreshCreatureStatus (char *infobuffer);
    void updateRightRef ();
-   // void donateC4ToHuman (); // Commented out - C4 is irrelevant in zombie mode
+   void donateC4ToHuman ();
    void clearAmmoInfo ();
    void handleChatterTaskChange (Task tid);
 
@@ -680,10 +655,6 @@ public:
    float m_healthValue {}; // clamped bot health
    float m_stayTime {}; // stay time before reconnect
 
-   // Neural network training variables for enhanced reward tracking
-   float m_lastEnemyHealth {}; // track enemy health changes for damage rewards
-   float m_lastBotHealth {}; // track bot health changes for damage penalties
-
    int m_blindNodeIndex {}; // node index to cover when blind
    int m_flashLevel {}; // flashlight level
    int m_numEnemiesLeft {}; // number of enemies alive left on map
@@ -791,7 +762,6 @@ public:
    void kill ();
    void kick (bool silent = false);
    void resetDoubleJump ();
-   void resetGoalHist ();
    void startDoubleJump (edict_t *ent);
    void sendBotToOrigin (const Vector &origin);
    void markStale ();
@@ -803,25 +773,6 @@ public:
    bool findNextBestNode ();
    bool findNextBestNodeEx (const IntArray &data, bool handleFails);
    bool seesEntity (const Vector &dest, bool fromBody = false);
-
-   // Neural network integration methods
-   struct ZombieTrainingState getCurrentState ();
-   struct ZombieTrainingAction getCurrentAction ();
-   struct ZombieTrainingReward calculateReward ();
-   struct ZombieTrainingAction predictNeuralAction ();
-   bool shouldUseNeuralNetwork ();
-   void printNeuralStats ();
-   float getNeuralConfidence () const;
-   
-   // Static methods for global neural network management
-   static void initializeNeuralSystem (const String &dataDir, const String &modelPath);
-   static void shutdownNeuralSystem ();
-   static void startDataCollection ();
-   static void stopDataCollection ();
-   static bool isNeuralSystemEnabled ();
-   
-   // Neural action execution
-   void executeNeuralAction (const Vector &action);
 
    int getAmmo () const;
    int getAmmo (int id) const;
@@ -886,15 +837,6 @@ public:
       return BotGraph::instance ().exists (index) && index != m_currentNodeIndex;
    }
 
-   // External control interface functions
-   void enableExternalControl (bool enable);
-   void setExternalMovement (float forward, float side, bool jump, bool duck);
-   void setExternalAngles (const Vector &angles);
-   void setExternalButtons (bool attack1, bool attack2, bool reload);
-   void setExternalWeapon (int weaponId);
-   bool isUnderExternalControl () const { return m_externalControl; }
-   void executeExternalControl ();
-
 private:
    // returns true if bot is using a sniper rifle
    bool usesSniper () const {
@@ -950,19 +892,6 @@ private:
    bool isRecoilHigh () const {
       return pev->punchangle.x < -1.45f;
    }
-
-   // External control interface variables
-   bool m_externalControl {}; // bot is under external control
-   int m_externalButtons {}; // external button commands
-   Vector m_externalAngles {}; // external view angles
-   float m_externalForward {}; // external forward/backward movement (-1 to 1)
-   float m_externalSide {}; // external side movement (-1 to 1)
-   bool m_externalJump {}; // external jump command
-   bool m_externalDuck {}; // external duck command
-   bool m_externalAttack1 {}; // external primary attack
-   bool m_externalAttack2 {}; // external secondary attack
-   bool m_externalReload {}; // external reload command
-   int m_externalWeapon {}; // external weapon selection
 };
 
 #include "config.h"
@@ -1013,12 +942,6 @@ extern ConVar cv_smoke_grenade_checks;
 extern ConVar cv_check_darkness;
 extern ConVar cv_use_hitbox_enemy_targeting;
 extern ConVar cv_restricted_weapons;
-
-// zombie-specific configuration variables
-extern ConVar cv_zombie_hunt_range;
-// extern ConVar cv_zombie_speed_multiplier; // REMOVED: Speed is handled by zombie mod itself
-extern ConVar cv_zombie_update_frequency;
-extern ConVar cv_zombie_aggression_level;
 
 extern ConVar mp_freezetime;
 extern ConVar mp_roundtime;

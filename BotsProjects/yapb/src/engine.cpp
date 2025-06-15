@@ -13,12 +13,6 @@ ConVar cv_threadpool_workers ("threadpool_workers", "-1", "Maximum number of thr
 ConVar cv_grenadier_mode ("grenadier_mode", "0", "If enabled, bots will not apply throwing condition on grenades.");
 ConVar cv_ignore_enemies_after_spawn_time ("ignore_enemies_after_spawn_time", "0", "Make bots ignore enemies for a specified here time in seconds on new round. Useful for Zombie Plague mods.", false);
 
-// zombie-specific configuration variables
-ConVar cv_zombie_hunt_range ("zombie_hunt_range", "1024.0", "Maximum range in units that zombie bots will actively hunt human targets.", true, 512.0f, 4096.0f);
-// ConVar cv_zombie_speed_multiplier - REMOVED: Speed is handled by zombie mod itself
-ConVar cv_zombie_update_frequency ("zombie_update_frequency", "0.5", "How often in seconds zombie bots reassess their targets.", true, 0.1f, 2.0f);
-ConVar cv_zombie_aggression_level ("zombie_aggression_level", "80", "Aggression level percentage for zombie behavior intensity.", true, 0.0f, 100.0f);
-
 ConVar sv_skycolor_r ("sv_skycolor_r", nullptr, Var::GameRef);
 ConVar sv_skycolor_g ("sv_skycolor_g", nullptr, Var::GameRef);
 ConVar sv_skycolor_b ("sv_skycolor_b", nullptr, Var::GameRef);
@@ -93,7 +87,7 @@ void Game::levelInitialize (edict_t *entities, int max) {
 
    // initialize quota management
    bots.initQuota ();
-   
+
    // install the sendto hook to fake queries
    fakequeries.init ();
 

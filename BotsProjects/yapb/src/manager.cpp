@@ -72,9 +72,6 @@ BotManager::BotManager () {
    m_killerEntity = nullptr;
 
    initFilters ();
-   
-   // Initialize external control system
-   initExternalControl ();
 }
 
 void BotManager::createKillerEntity () {
@@ -302,9 +299,6 @@ Bot *BotManager::findAliveBot () {
 
 void BotManager::frame () {
    // this function calls showframe function for all available at call moment bots
-   
-   // Check for external control commands
-   checkExternalControlCommands ();
 
    for (const auto &bot : m_bots) {
       bot->frame ();
@@ -1251,10 +1245,6 @@ Bot::Bot (edict_t *bot, int difficulty, int personality, int team, int skin) {
 
    m_tasks.reserve (Task::Max);
 
-   // initialize neural tracking variables
-   m_lastEnemyHealth = 0.0f;
-   m_lastBotHealth = 0.0f;
-
    newRound ();
 }
 
@@ -1428,6 +1418,7 @@ void BotManager::handleDeath (edict_t *killer, edict_t *victim) {
    // mark bot as "spawned", and reset it to new-round state when it dead (for csdm/zombie only)
    if (victimBot != nullptr) {
       victimBot->spawned ();
+
       victimBot->m_isAlive = false;
    }
 
@@ -1733,7 +1724,6 @@ void Bot::newRound () {
    }
    m_thinkDelay.interval = updateInterval;
    m_commandDelay.interval = commandInterval;
-   
 }
 
 void Bot::resetPathSearchType () {
