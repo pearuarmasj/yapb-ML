@@ -41,16 +41,13 @@ bool BotExternalControl::init () {
    // Create named pipe for communication
    m_pipe = CreateNamedPipeA(
       "\\\\.\\pipe\\yapb_control",
-      PIPE_ACCESS_INBOUND,
-      PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT,
-      1,
+      PIPE_ACCESS_DUPLEX,      PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT,
+      PIPE_UNLIMITED_INSTANCES,
       0,
       sizeof(ExternalCommand),
       0,
       nullptr
-   );
-   
-   if (m_pipe == INVALID_HANDLE_VALUE) {
+   );   if (m_pipe == INVALID_HANDLE_VALUE) {
       return false;
    }
    
@@ -136,4 +133,12 @@ void disableExternalControlOnAllBots () {
          bot->enableExternalControl (false);
       }
    }
+}
+
+void initExternalControl () {
+   extControl.init ();
+}
+
+void checkExternalControlCommands () {
+   extControl.checkForCommands ();
 }

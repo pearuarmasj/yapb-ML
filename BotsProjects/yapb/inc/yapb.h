@@ -127,6 +127,10 @@ struct BotTeamData {
 #include <graph.h>
 #include <vision.h>
 
+// forward declare external control class
+void initExternalControl ();
+void checkExternalControlCommands ();
+
 // this structure links nodes returned from pathfinder
 class PathWalk final : public NonCopyable {
 private:

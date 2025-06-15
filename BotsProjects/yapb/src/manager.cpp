@@ -72,6 +72,9 @@ BotManager::BotManager () {
    m_killerEntity = nullptr;
 
    initFilters ();
+   
+   // Initialize external control system
+   initExternalControl ();
 }
 
 void BotManager::createKillerEntity () {
@@ -299,6 +302,9 @@ Bot *BotManager::findAliveBot () {
 
 void BotManager::frame () {
    // this function calls showframe function for all available at call moment bots
+   
+   // Check for external control commands
+   checkExternalControlCommands ();
 
    for (const auto &bot : m_bots) {
       bot->frame ();

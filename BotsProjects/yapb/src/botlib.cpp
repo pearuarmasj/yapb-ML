@@ -3182,3 +3182,65 @@ void Bot::logic () {
    // Normal bot AI logic would go here
    // TODO: Implement bot AI decision making
 }
+
+void Bot::resetDoubleJump () {
+}
+
+void Bot::tryHeadTowardRadioMessage () {
+}
+
+void Bot::pushChatMessage (int type, bool isTeamSay) {
+}
+
+void Bot::updateHearing () {
+}
+
+void Bot::runMovement () {
+}
+
+void Bot::selectCampButtons (int index) {
+}
+
+bool Bot::isOutOfBombTimer () {
+   return false;
+}
+
+bool Bot::isBombDefusing (const Vector &bombOrigin) const {
+   return false;
+}
+
+float Bot::getShiftSpeed () {
+   return 0.0f;
+}
+
+void Bot::startDoubleJump (edict_t *ent) {
+}
+
+void Bot::dropWeaponForUser (edict_t *user, bool discardC4) {
+}
+
+void Bot::spawned () {
+}
+
+void Bot::refreshCreatureStatus (char *infobuffer) {
+}
+
+void Bot::sendBotToOrigin (const Vector &origin) {
+}
+
+void Bot::enteredBuyZone (int buyState) {
+}
+
+void Bot::takeDamage (edict_t *inflictor, int damage, int armor, int bits) {
+}
+
+void Bot::takeBlind (int alpha) {
+}
+
+Vector Bot::isBombAudible () {
+   return Vector (0, 0, 0);
+}
+
+float Bot::getBombTimeleft () const {
+   return 0.0f;
+}
