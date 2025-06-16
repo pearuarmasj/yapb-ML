@@ -158,27 +158,28 @@ from collections import deque
 print("Wait 3 seconds to switch to the game window...")
 time.sleep(3)  # Allow time to switch to the game window
 
+# ---- EDIT THESE TO MATCH YOUR GAME WINDOW ----
+region = {'top': 100, 'left': 100, 'width': 800, 'height': 600}  # Set your CS window region here
+
 def grab_screen(region=None):
     with mss.mss() as sct:
-        monitor = sct.monitors[1] if not region else region
+        monitor = region if region else sct.monitors[1]
         img = np.array(sct.grab(monitor))
         return img[..., :3]  # Only RGB
 
 class CS16Env:
     def __init__(self, region=None):
         self.region = region
-        self.actions = ['w', 'a', 's', 'd', 'shoot']
+        self.actions = ['w', 'a', 's', 'd']
     def reset(self):
         pass
     def step(self, action):
         if action in ['w', 'a', 's', 'd']:
             pydirectinput.keyDown(action)
-            time.sleep(0.1)
+            time.sleep(0.01)  # MAX SPEED. Increase if CS doesn't register key.
             pydirectinput.keyUp(action)
-        elif action == 'shoot':
-            pydirectinput.click(button='left')
         obs = grab_screen(self.region)
-        reward = random.random()
+        reward = random.random()  # Placeholder, gets overridden
         done = False
         return obs, reward, done, {}
     def get_observation(self):
@@ -200,7 +201,7 @@ def stack_frames(new_frame):
     return np.stack(frame_stack, axis=0)
 
 class DQN(nn.Module):
-    def __init__(self, in_channels=4, n_actions=5):
+    def __init__(self, in_channels=4, n_actions=4):
         super().__init__()
         self.net = nn.Sequential(
             nn.Conv2d(in_channels, 16, 8, stride=4),
@@ -228,10 +229,13 @@ class ReplayBuffer:
 
 env = CS16Env(region=None)
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-dqn = DQN().to(device)
+dqn = DQN(in_channels=4, n_actions=len(env.actions)).to(device)
+target_dqn = DQN(in_channels=4, n_actions=len(env.actions)).to(device)
+target_dqn.load_state_dict(dqn.state_dict())
+target_dqn.eval()
 optimizer = optim.Adam(dqn.parameters(), lr=1e-4)
 buffer = ReplayBuffer(10000)
-BATCH_SIZE = 32
+BATCH_SIZE = 2048
 GAMMA = 0.99
 rewards = []
 
@@ -239,6 +243,12 @@ obs = preprocess(env.get_observation())
 reset_stack(obs)
 state = stack_frames(obs)
 prev_frame = obs
+
+stuck_counter = 0
+STUCK_LIMIT = 20
+STUCK_THRESH = 1e-4
+
+TARGET_UPDATE_FREQ = 1000  # steps
 
 for step in range(10000):
     if random.random() < 0.05:
@@ -256,6 +266,16 @@ for step in range(10000):
     reward = np.mean(diff)
     prev_frame = obs2_proc
     rewards.append(reward)
+
+    if reward < STUCK_THRESH:
+        stuck_counter += 1
+    else:
+        stuck_counter = 0
+    if stuck_counter >= STUCK_LIMIT:
+        print(f'Agent stuck at step {step}! Resetting episode...')
+        done = True
+        stuck_counter = 0
+
     print(f"Step: {step} | Action: {action} | Reward: {reward:.5f} | Done: {done}")
     cv2.imshow('Bot POV', obs2_proc)
     if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -263,29 +283,39 @@ for step in range(10000):
         break
     buffer.push((state, action_idx, reward, next_state, done))
     state = next_state
-    if len(buffer.buffer) > BATCH_SIZE and step % 4 == 0:
+
+    if len(buffer.buffer) > BATCH_SIZE:
         batch = buffer.sample(BATCH_SIZE)
         s, a, r, s2, d = zip(*batch)
-        s = torch.tensor(s, dtype=torch.float32).to(device)
+        s = torch.from_numpy(np.stack(s)).float().to(device)
         a = torch.tensor(a).unsqueeze(1).to(device)
         r = torch.tensor(r, dtype=torch.float32).unsqueeze(1).to(device)
-        s2 = torch.tensor(s2, dtype=torch.float32).to(device)
+        s2 = torch.from_numpy(np.stack(s2)).float().to(device)
         d = torch.tensor(d, dtype=torch.float32).unsqueeze(1).to(device)
         q_vals = dqn(s).gather(1, a)
         with torch.no_grad():
-            next_q = dqn(s2).max(1)[0].unsqueeze(1)
+            # THIS LINE IS THE ACTUAL DOUBLE DQN LOGIC:
+            next_actions = dqn(s2).max(1)[1].unsqueeze(1)
+            next_q = target_dqn(s2).gather(1, next_actions)
         target = r + GAMMA * next_q * (1 - d)
         loss = ((q_vals - target) ** 2).mean()
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
         print(f"Train Step: {step} | Loss: {loss.item():.5f}")
+
+        # Update target network every TARGET_UPDATE_FREQ steps
+        if step % TARGET_UPDATE_FREQ == 0:
+            target_dqn.load_state_dict(dqn.state_dict())
+            print("Updated target network.")
+
     if done:
         print(f"--- Episode finished at step {step}. Resetting... ---")
         obs = preprocess(env.get_observation())
         reset_stack(obs)
         state = stack_frames(obs)
         prev_frame = obs
+
 cv2.destroyAllWindows()
 plt.plot(rewards)
 plt.xlabel('Step')
