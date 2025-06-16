@@ -1,148 +1,3 @@
-#define DIK_ESCAPE          0x01
-#define DIK_1               0x02
-#define DIK_2               0x03
-#define DIK_3               0x04
-#define DIK_4               0x05
-#define DIK_5               0x06
-#define DIK_6               0x07
-#define DIK_7               0x08
-#define DIK_8               0x09
-#define DIK_9               0x0A
-#define DIK_0               0x0B
-#define DIK_MINUS           0x0C    /* - on main keyboard */
-#define DIK_EQUALS          0x0D
-#define DIK_BACK            0x0E    /* backspace */
-#define DIK_TAB             0x0F
-#define DIK_Q               0x10
-#define DIK_W               0x11
-#define DIK_E               0x12
-#define DIK_R               0x13
-#define DIK_T               0x14
-#define DIK_Y               0x15
-#define DIK_U               0x16
-#define DIK_I               0x17
-#define DIK_O               0x18
-#define DIK_P               0x19
-#define DIK_LBRACKET        0x1A
-#define DIK_RBRACKET        0x1B
-#define DIK_RETURN          0x1C    /* Enter on main keyboard */
-#define DIK_LCONTROL        0x1D
-#define DIK_A               0x1E
-#define DIK_S               0x1F
-#define DIK_D               0x20
-#define DIK_F               0x21
-#define DIK_G               0x22
-#define DIK_H               0x23
-#define DIK_J               0x24
-#define DIK_K               0x25
-#define DIK_L               0x26
-#define DIK_SEMICOLON       0x27
-#define DIK_APOSTROPHE      0x28
-#define DIK_GRAVE           0x29    /* accent grave */
-#define DIK_LSHIFT          0x2A
-#define DIK_BACKSLASH       0x2B
-#define DIK_Z               0x2C
-#define DIK_X               0x2D
-#define DIK_C               0x2E
-#define DIK_V               0x2F
-#define DIK_B               0x30
-#define DIK_N               0x31
-#define DIK_M               0x32
-#define DIK_COMMA           0x33
-#define DIK_PERIOD          0x34    /* . on main keyboard */
-#define DIK_SLASH           0x35    /* / on main keyboard */
-#define DIK_RSHIFT          0x36
-#define DIK_MULTIPLY        0x37    /* * on numeric keypad */
-#define DIK_LMENU           0x38    /* left Alt */
-#define DIK_SPACE           0x39
-#define DIK_CAPITAL         0x3A
-#define DIK_F1              0x3B
-#define DIK_F2              0x3C
-#define DIK_F3              0x3D
-#define DIK_F4              0x3E
-#define DIK_F5              0x3F
-#define DIK_F6              0x40
-#define DIK_F7              0x41
-#define DIK_F8              0x42
-#define DIK_F9              0x43
-#define DIK_F10             0x44
-#define DIK_NUMLOCK         0x45
-#define DIK_SCROLL          0x46    /* Scroll Lock */
-#define DIK_NUMPAD7         0x47
-#define DIK_NUMPAD8         0x48
-#define DIK_NUMPAD9         0x49
-#define DIK_SUBTRACT        0x4A    /* - on numeric keypad */
-#define DIK_NUMPAD4         0x4B
-#define DIK_NUMPAD5         0x4C
-#define DIK_NUMPAD6         0x4D
-#define DIK_ADD             0x4E    /* + on numeric keypad */
-#define DIK_NUMPAD1         0x4F
-#define DIK_NUMPAD2         0x50
-#define DIK_NUMPAD3         0x51
-#define DIK_NUMPAD0         0x52
-#define DIK_DECIMAL         0x53    /* . on numeric keypad */
-#define DIK_OEM_102         0x56    /* <> or \| on RT 102-key keyboard (Non-U.S.) */
-#define DIK_F11             0x57
-#define DIK_F12             0x58
-#define DIK_F13             0x64    /*                     (NEC PC98) */
-#define DIK_F14             0x65    /*                     (NEC PC98) */
-#define DIK_F15             0x66    /*                     (NEC PC98) */
-#define DIK_KANA            0x70    /* (Japanese keyboard)            */
-#define DIK_ABNT_C1         0x73    /* /? on Brazilian keyboard */
-#define DIK_CONVERT         0x79    /* (Japanese keyboard)            */
-#define DIK_NOCONVERT       0x7B    /* (Japanese keyboard)            */
-#define DIK_YEN             0x7D    /* (Japanese keyboard)            */
-#define DIK_ABNT_C2         0x7E    /* Numpad . on Brazilian keyboard */
-#define DIK_NUMPADEQUALS    0x8D    /* = on numeric keypad (NEC PC98) */
-#define DIK_PREVTRACK       0x90    /* Previous Track (DIK_CIRCUMFLEX on Japanese keyboard) */
-#define DIK_AT              0x91    /*                     (NEC PC98) */
-#define DIK_COLON           0x92    /*                     (NEC PC98) */
-#define DIK_UNDERLINE       0x93    /*                     (NEC PC98) */
-#define DIK_KANJI           0x94    /* (Japanese keyboard)            */
-#define DIK_STOP            0x95    /*                     (NEC PC98) */
-#define DIK_AX              0x96    /*                     (Japan AX) */
-#define DIK_UNLABELED       0x97    /*                        (J3100) */
-#define DIK_NEXTTRACK       0x99    /* Next Track */
-#define DIK_NUMPADENTER     0x9C    /* Enter on numeric keypad */
-#define DIK_RCONTROL        0x9D
-#define DIK_MUTE            0xA0    /* Mute */
-#define DIK_CALCULATOR      0xA1    /* Calculator */
-#define DIK_PLAYPAUSE       0xA2    /* Play / Pause */
-#define DIK_MEDIASTOP       0xA4    /* Media Stop */
-#define DIK_VOLUMEDOWN      0xAE    /* Volume - */
-#define DIK_VOLUMEUP        0xB0    /* Volume + */
-#define DIK_WEBHOME         0xB2    /* Web home */
-#define DIK_NUMPADCOMMA     0xB3    /* , on numeric keypad (NEC PC98) */
-#define DIK_DIVIDE          0xB5    /* / on numeric keypad */
-#define DIK_SYSRQ           0xB7
-#define DIK_RMENU           0xB8    /* right Alt */
-#define DIK_PAUSE           0xC5    /* Pause */
-#define DIK_HOME            0xC7    /* Home on arrow keypad */
-#define DIK_UP              0xC8    /* UpArrow on arrow keypad */
-#define DIK_PRIOR           0xC9    /* PgUp on arrow keypad */
-#define DIK_LEFT            0xCB    /* LeftArrow on arrow keypad */
-#define DIK_RIGHT           0xCD    /* RightArrow on arrow keypad */
-#define DIK_END             0xCF    /* End on arrow keypad */
-#define DIK_DOWN            0xD0    /* DownArrow on arrow keypad */
-#define DIK_NEXT            0xD1    /* PgDn on arrow keypad */
-#define DIK_INSERT          0xD2    /* Insert on arrow keypad */
-#define DIK_DELETE          0xD3    /* Delete on arrow keypad */
-#define DIK_LWIN            0xDB    /* Left Windows key */
-#define DIK_RWIN            0xDC    /* Right Windows key */
-#define DIK_APPS            0xDD    /* AppMenu key */
-#define DIK_POWER           0xDE    /* System Power */
-#define DIK_SLEEP           0xDF    /* System Sleep */
-#define DIK_WAKE            0xE3    /* System Wake */
-#define DIK_WEBSEARCH       0xE5    /* Web Search */
-#define DIK_WEBFAVORITES    0xE6    /* Web Favorites */
-#define DIK_WEBREFRESH      0xE7    /* Web Refresh */
-#define DIK_WEBSTOP         0xE8    /* Web Stop */
-#define DIK_WEBFORWARD      0xE9    /* Web Forward */
-#define DIK_WEBBACK         0xEA    /* Web Back */
-#define DIK_MYCOMPUTER      0xEB    /* My Computer */
-#define DIK_MAIL            0xEC    /* Mail */
-#define DIK_MEDIASELECT     0xED    /* Media Select */
-
 import mss
 import numpy as np
 import cv2
@@ -154,34 +9,125 @@ import random
 import pydirectinput
 import matplotlib.pyplot as plt
 from collections import deque
+import ctypes
+from ctypes import wintypes
+import win32gui
+import win32api
+import win32process
+import psutil
 
 print("Wait 3 seconds to switch to the game window...")
-time.sleep(3)  # Allow time to switch to the game window
+time.sleep(3)
 
-# ---- EDIT THESE TO MATCH YOUR GAME WINDOW ----
-region = {'top': 100, 'left': 100, 'width': 800, 'height': 600}  # Set your CS window region here
+region = {"top": 0, "left": 0, "width": 2560, "height": 1440}
+
+def move_mouse_relative(x, y):
+    ctypes.windll.user32.mouse_event(0x0001, x, y, 0, 0)  # MOUSEEVENTF_MOVE
+
+def get_window_info():
+    def callback(hwnd, windows):
+        if win32gui.IsWindowVisible(hwnd) and win32gui.IsWindowEnabled(hwnd):
+            # Get process ID for this window
+            _, pid = win32process.GetWindowThreadProcessId(hwnd)
+            try:
+                # Get process name
+                process = psutil.Process(pid)
+                process_name = process.name().lower()
+                
+                # Check if it's AssaultCube
+                if "AssaultCube" in process_name or "ac_client.exe" in process_name:
+                    rect = win32gui.GetWindowRect(hwnd)
+                    x = rect[0]
+                    y = rect[1]
+                    w = rect[2] - x
+                    h = rect[3] - y
+                    window_text = win32gui.GetWindowText(hwnd)
+                    print(f"Window: {window_text} (Process: {process_name})")
+                    print(f"Position: x={x}, y={y}")
+                    print(f"Size: {w}x{h}")
+                    print(f"Region dict: {{'top': {y}, 'left': {x}, 'width': {w}, 'height': {h}}}")
+                    windows.append(hwnd)
+            except:
+                pass
+        return True
+    
+    windows = []
+    win32gui.EnumWindows(callback, windows)
+    
+    if not windows:
+        print("AssaultCube window not found. Make sure the game is running.")
+
+get_window_info()
 
 def grab_screen(region=None):
     with mss.mss() as sct:
-        monitor = region if region else sct.monitors[1]
+        monitor = sct.monitors[1] if not region else region
         img = np.array(sct.grab(monitor))
-        return img[..., :3]  # Only RGB
+        return img[..., :3]
+
 
 class CS16Env:
     def __init__(self, region=None):
         self.region = region
-        self.actions = ['w', 'a', 's', 'd']
+        # Macro actions: always WASD + mouse combination
+        self.actions = [
+            ('w','mouse_left'), ('w','mouse_right'),
+            ('a','mouse_left'), ('a','mouse_right'),
+            ('s','mouse_left'), ('s','mouse_right'),
+            ('d','mouse_left'), ('d','mouse_right')
+        ]
+        # Track which keys are currently held down
+        self.held_keys = set()
+        
     def reset(self):
-        pass
+        # Release all held keys on reset
+        for key in list(self.held_keys):
+            pydirectinput.keyUp(key)
+        self.held_keys.clear()
+        
     def step(self, action):
-        if action in ['w', 'a', 's', 'd']:
-            pydirectinput.keyDown(action)
-            time.sleep(0.01)  # MAX SPEED. Increase if CS doesn't register key.
-            pydirectinput.keyUp(action)
+        used_wasd = False
+        used_mouse = False
+        
+        # Parse action
+        if isinstance(action, tuple) or isinstance(action, list):
+            if len(action) == 2:
+                key, mouse = action
+            else:
+                key = action[0]
+                mouse = None
+        else:
+            key = action
+            mouse = None
+            
+        # Release keys that aren't part of current action
+        current_wasd = key if key in ['w', 'a', 's', 'd'] else None
+        for held_key in list(self.held_keys):
+            if held_key != current_wasd:
+                pydirectinput.keyUp(held_key)
+                self.held_keys.remove(held_key)
+        
+        # Hold down the current WASD key
+        if current_wasd and current_wasd not in self.held_keys:
+            pydirectinput.keyDown(current_wasd)
+            self.held_keys.add(current_wasd)
+            used_wasd = True
+        elif current_wasd:
+            used_wasd = True  # Key still being held
+            
+        # Handle mouse movement
+        if mouse == 'mouse_left':
+            move_mouse_relative(-50, 0)
+            used_mouse = True
+        elif mouse == 'mouse_right':
+            move_mouse_relative(50, 0)
+            used_mouse = True
+            
         obs = grab_screen(self.region)
-        reward = random.random()  # Placeholder, gets overridden
+        reward = random.random()  # gets overwritten
         done = False
-        return obs, reward, done, {}
+        return obs, reward, done, {'used_wasd': used_wasd, 'used_mouse': used_mouse}
+        
     def get_observation(self):
         return grab_screen(self.region)
 
@@ -201,7 +147,7 @@ def stack_frames(new_frame):
     return np.stack(frame_stack, axis=0)
 
 class DQN(nn.Module):
-    def __init__(self, in_channels=4, n_actions=4):
+    def __init__(self, in_channels=4, n_actions=6):
         super().__init__()
         self.net = nn.Sequential(
             nn.Conv2d(in_channels, 16, 8, stride=4),
@@ -225,9 +171,17 @@ class ReplayBuffer:
             self.buffer.pop(0)
         self.buffer.append(exp)
     def sample(self, batch_size):
-        return random.sample(self.buffer, batch_size)
+        recent = self.buffer[-50:] if len(self.buffer) >= 50 else self.buffer
+        n_recent = batch_size // 2
+        n_random = batch_size - n_recent
+        batch = []
+        if recent:
+            batch.extend(random.choices(recent, k=n_recent))
+        if len(self.buffer) > 0:
+            batch.extend(random.choices(self.buffer, k=n_random))
+        return batch
 
-env = CS16Env(region=None)
+env = CS16Env(region=region)
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 dqn = DQN(in_channels=4, n_actions=len(env.actions)).to(device)
 target_dqn = DQN(in_channels=4, n_actions=len(env.actions)).to(device)
@@ -235,7 +189,7 @@ target_dqn.load_state_dict(dqn.state_dict())
 target_dqn.eval()
 optimizer = optim.Adam(dqn.parameters(), lr=1e-4)
 buffer = ReplayBuffer(10000)
-BATCH_SIZE = 2048
+BATCH_SIZE = 32
 GAMMA = 0.99
 rewards = []
 
@@ -247,10 +201,10 @@ prev_frame = obs
 stuck_counter = 0
 STUCK_LIMIT = 20
 STUCK_THRESH = 1e-4
-
-TARGET_UPDATE_FREQ = 1000  # steps
+TARGET_UPDATE_FREQ = 1000
 
 for step in range(10000):
+    # ε-greedy over macro-actions
     if random.random() < 0.05:
         action_idx = random.randint(0, len(env.actions) - 1)
     else:
@@ -264,23 +218,105 @@ for step in range(10000):
     next_state = stack_frames(obs2_proc)
     diff = np.abs(obs2_proc.astype(np.float32) - prev_frame.astype(np.float32))
     reward = np.mean(diff)
-    prev_frame = obs2_proc
-    rewards.append(reward)
-
+    
+    # Enhanced stuck detection
     if reward < STUCK_THRESH:
         stuck_counter += 1
+        if stuck_counter > 5:
+            reward = -0.5 - (stuck_counter * 0.1)
+        else:
+            reward = -0.2
     else:
         stuck_counter = 0
+    prev_frame = obs2_proc
+
+    # --- Novelty exploration reward with dual-control gating ---
+    small_obs = cv2.resize(obs2_proc, (16, 16)).astype(np.uint8)
+    novelty_hash = tuple(small_obs.flatten())
+    if not hasattr(globals(), 'novelty_set'):
+        novelty_set = set()
+        novelty_history = deque(maxlen=1000)
+        action_history = deque(maxlen=10)
+        mouse_direction_history = deque(maxlen=8)
+        globals()['novelty_set'] = novelty_set
+        globals()['novelty_history'] = novelty_history
+        globals()['action_history'] = action_history
+        globals()['mouse_direction_history'] = mouse_direction_history
+    else:
+        novelty_set = globals()['novelty_set']
+        novelty_history = globals()['novelty_history']
+        action_history = globals()['action_history']
+        mouse_direction_history = globals()['mouse_direction_history']
+    used_wasd = info.get('used_wasd', False)
+    used_mouse = info.get('used_mouse', False)
+      # Track action patterns for anti-gaming
+    action_history.append(action)
+    if len(action) == 2 and action[1] == 'mouse_left':
+        mouse_direction_history.append('left')
+    elif len(action) == 2 and action[1] == 'mouse_right':
+        mouse_direction_history.append('right')
+
+    if novelty_hash not in novelty_set and used_wasd and used_mouse and reward > STUCK_THRESH:
+        reward += 0.3
+        novelty_set.add(novelty_hash)
+        novelty_history.append(novelty_hash)
+        if len(novelty_set) > 1200:
+            to_remove = novelty_history.popleft()
+            novelty_set.remove(to_remove)
+    elif novelty_hash not in novelty_set:
+        reward -= 0.2
+      # Apply reward reduction instead of punishment for single input usage
+    if used_wasd and used_mouse:
+        pass
+    elif used_wasd or used_mouse:
+        reward *= 0.1
+    else:
+        reward *= 0.05
+    
+    # Anti-gaming mechanisms
+    gaming_penalty = 0.0
+    
+    # Detect repetitive action patterns
+    if len(action_history) >= 6:
+        recent_actions = list(action_history)[-6:]
+        if len(set(recent_actions)) <= 2:
+            gaming_penalty += 0.4
+    
+    # Detect mouse direction bias or flicking
+    if len(mouse_direction_history) >= 6:
+        recent_mouse = list(mouse_direction_history)[-6:]
+        left_count = recent_mouse.count('left')
+        right_count = recent_mouse.count('right')
+        
+        # Punish extreme directional bias
+        if left_count >= 5 or right_count >= 5:
+            gaming_penalty += 0.3
+        
+        # Punish alternating flick patterns
+        if len(recent_mouse) >= 4:
+            is_alternating = all(
+                recent_mouse[i] != recent_mouse[i+1] 
+                for i in range(len(recent_mouse)-1)
+            )
+            if is_alternating:
+                gaming_penalty += 0.5
+    
+    # Apply gaming penalties
+    if gaming_penalty > 0:
+        reward *= max(0.01, 1.0 - gaming_penalty)
+
+    rewards.append(reward)
     if stuck_counter >= STUCK_LIMIT:
         print(f'Agent stuck at step {step}! Resetting episode...')
         done = True
         stuck_counter = 0
 
     print(f"Step: {step} | Action: {action} | Reward: {reward:.5f} | Done: {done}")
-    cv2.imshow('Bot POV', obs2_proc)
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        print("User interrupted, quitting.")
-        break
+    if step % 10 == 0:
+        cv2.imshow('Bot POV', obs2_proc)
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            print("User interrupted, quitting.")
+            break
     buffer.push((state, action_idx, reward, next_state, done))
     state = next_state
 
@@ -294,7 +330,6 @@ for step in range(10000):
         d = torch.tensor(d, dtype=torch.float32).unsqueeze(1).to(device)
         q_vals = dqn(s).gather(1, a)
         with torch.no_grad():
-            # THIS LINE IS THE ACTUAL DOUBLE DQN LOGIC:
             next_actions = dqn(s2).max(1)[1].unsqueeze(1)
             next_q = target_dqn(s2).gather(1, next_actions)
         target = r + GAMMA * next_q * (1 - d)
@@ -302,13 +337,14 @@ for step in range(10000):
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
-        print(f"Train Step: {step} | Loss: {loss.item():.5f}")
-
-        # Update target network every TARGET_UPDATE_FREQ steps
+        if step % 50 == 0:
+            print(f"Train Step: {step} | Loss: {loss.item():.5f}")
+        if device.type == 'cuda' and step % 50 == 0:
+            print(f"Current VRAM usage: {torch.cuda.memory_allocated() // 1024**2} MB")
+            print(f"Max VRAM allocated: {torch.cuda.max_memory_allocated() // 1024**2} MB")
         if step % TARGET_UPDATE_FREQ == 0:
             target_dqn.load_state_dict(dqn.state_dict())
             print("Updated target network.")
-
     if done:
         print(f"--- Episode finished at step {step}. Resetting... ---")
         obs = preprocess(env.get_observation())
@@ -317,6 +353,7 @@ for step in range(10000):
         prev_frame = obs
 
 cv2.destroyAllWindows()
+env.reset()
 plt.plot(rewards)
 plt.xlabel('Step')
 plt.ylabel('Reward')
