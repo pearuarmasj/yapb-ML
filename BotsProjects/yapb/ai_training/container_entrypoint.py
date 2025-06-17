@@ -126,6 +126,6 @@ if __name__ == "__main__":
         else:
             print("GPU not available, using CPU rendering")
     except:
-        print("nvidia-smi not found, using CPU rendering")
-      # Run the main experiments script with menu
-    subprocess.run(['python3', '/app/container_experiments.py'], cwd='/app')
+        print("nvidia-smi not found, using CPU rendering")    # Run the main experiments script with mode from environment
+    bot_mode = os.environ.get('BOT_MODE', 'collect')
+    subprocess.run(['python3', '/app/container_experiments.py', bot_mode], cwd='/app')
