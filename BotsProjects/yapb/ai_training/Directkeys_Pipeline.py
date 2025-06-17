@@ -15,6 +15,8 @@ import win32gui
 import win32api
 import win32process
 import psutil
+from stable_baselines3 import dqn
+from stable_baselines3 import PPO
 
 print("Wait 3 seconds to switch to the game window...")
 time.sleep(3)
