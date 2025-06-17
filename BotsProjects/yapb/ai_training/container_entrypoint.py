@@ -77,26 +77,46 @@ def start_assaultcube(display_num):
     os.chdir('/opt/assaultcube')
     
     print(f"Starting AssaultCube on display :{display_num}")
-      # Create a config file to force GPU rendering and set map
-    config_content = """
-// Load specific map
-map ac_depot
-"""
     
-    config_dir = "/root/.assaultcube/v1.3/config"
+    # Kill any existing AssaultCube processes
+    subprocess.run(["pkill", "-f", "assaultcube"], check=False)
+    subprocess.run(["pkill", "-f", "ac_client"], check=False)
+    time.sleep(2)
+    
+    # Create all required config directories and files
+    ac_home = "/root/.assaultcube/v1.3"
+    config_dir = f"{ac_home}/config"
+    private_dir = f"{ac_home}/private"
+    
     os.makedirs(config_dir, exist_ok=True)
+    os.makedirs(private_dir, exist_ok=True)
+    
+    # Create missing auth config file
+    with open(f"{private_dir}/authprivate.cfg", "w") as f:
+        f.write("// Auto-generated auth config\n")
+    
+    # Create entropy file
+    with open(f"{private_dir}/entropy.dat", "w") as f:
+        f.write("entropy_data_placeholder\n")
+    
+    # Create autoexec config
+    config_content = """
+// Auto-generated config
+map ac_depot
+sound 0
+"""
     
     with open(f"{config_dir}/autoexec.cfg", "w") as f:
         f.write(config_content)
     
-    # Start AssaultCube with GPU acceleration forced
+    # Start AssaultCube with proper environment
     env = os.environ.copy()
     env['LIBGL_ALWAYS_SOFTWARE'] = '0'
     env['NVIDIA_VISIBLE_DEVICES'] = 'all'
     env['NVIDIA_DRIVER_CAPABILITIES'] = 'all'
     
     cmd = ["./assaultcube.sh", "--home=/root/.assaultcube/v1.3", "--init"]
-    proc = subprocess.Popen(cmd, env=env)
+    proc = subprocess.Popen(cmd, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(10)
     
     print("AssaultCube started, waiting for initialization...")
