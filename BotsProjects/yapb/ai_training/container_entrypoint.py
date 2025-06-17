@@ -50,13 +50,11 @@ def start_xvfb():
     
     # Create dummy Xauthority file
     subprocess.run(["touch", "/root/.Xauthority"], check=True)
-    subprocess.run(["xauth", "add", display, ".", "1234567890abcdef"], check=True)
-    
-    # Start VNC server on unique port based on display number
-    vnc_port = 5900 + display_num
+    subprocess.run(["xauth", "add", display, ".", "1234567890abcdef"], check=True)    # Start VNC server on standard port 5900
+    vnc_port = 5900
     print(f"Starting VNC server on port {vnc_port}")
     vnc_cmd = ["x11vnc", "-display", display, "-rfbport", str(vnc_port), 
-               "-forever", "-shared", "-bg", "-nopw"]
+               "-forever", "-shared", "-bg", "-nopw", "-listen", "0.0.0.0"]
     subprocess.Popen(vnc_cmd)
     time.sleep(2)
     

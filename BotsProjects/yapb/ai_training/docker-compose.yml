@@ -7,7 +7,8 @@ services:
       - NVIDIA_VISIBLE_DEVICES=all
       - NVIDIA_DRIVER_CAPABILITIES=all
       - BOT_MODE=${BOT_MODE:-collect}
-    # Remove port mapping to allow scaling - VNC will be accessible via container IP
+    ports:
+      - "5900:5900"  # Map VNC port directly
     volumes:
       - ./training_data:/data
       - /tmp/.X11-unix:/tmp/.X11-unix
@@ -20,9 +21,3 @@ services:
               capabilities: [gpu, utility, compute, graphics, display]
     stdin_open: true
     tty: true
-    networks:
-      - bot_network
-
-networks:
-  bot_network:
-    driver: bridge
