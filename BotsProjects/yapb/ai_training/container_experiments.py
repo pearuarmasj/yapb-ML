@@ -476,6 +476,30 @@ def save_debug_screenshot(region=None, filename_prefix="debug_screenshot"):
         return None
 
 if __name__ == "__main__":
+    # Check for command line arguments first
+    if len(sys.argv) > 1:
+        mode = sys.argv[1]
+        if mode == "collect":
+            collect_assaultcube_data()
+            sys.exit(0)
+        elif mode == "train":
+            train_from_data()
+            sys.exit(0)
+        elif mode == "both":
+            print("Starting data collection and training...")
+            import threading
+            import time
+            
+            # Start data collection in background
+            collection_thread = threading.Thread(target=collect_assaultcube_data)
+            collection_thread.daemon = True
+            collection_thread.start()
+            
+            # Wait a bit for initial data, then start training
+            time.sleep(60)
+            train_from_data()
+            sys.exit(0)
+    
     if "--instance-mode" in sys.argv:
         config = get_instance_config()
         print(f"Running in instance mode - ID: {config['instance_id']}")
