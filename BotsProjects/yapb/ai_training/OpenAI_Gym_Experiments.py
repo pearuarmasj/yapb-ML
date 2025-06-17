@@ -12,6 +12,7 @@ import ctypes
 from collections import deque
 import win32gui
 import win32api
+import win32con
 import win32process
 import psutil
 import pickle
@@ -21,9 +22,18 @@ import tkinter as tk
 from tkinter import messagebox
 import sys
 
-# CS16Env and preprocessing functions from your existing code
+# Disable pydirectinput failsafe for subprocess mode
+pydirectinput.FAILSAFE = False
+pydirectinput.PAUSE = 0.01
+
 def move_mouse_relative(x, y):
-    ctypes.windll.user32.mouse_event(0x0001, x, y, 0, 0)
+    try:
+        # Try pydirectinput first
+        pydirectinput.moveRel(x, y, relative=True)
+    except:
+        # Fallback to win32api
+        current_pos = win32api.GetCursorPos()
+        win32api.SetCursorPos((current_pos[0] + x, current_pos[1] + y))
 
 def grab_screen(region=None):
     if region:
@@ -40,56 +50,112 @@ def preprocess(frame, size=(84, 84)):
     frame = cv2.resize(frame, size)
     return frame.astype(np.uint8)
 
+def find_game_window():
+    """Find AssaultCube window handle"""
+    def enum_windows_callback(hwnd, windows):
+        if win32gui.IsWindowVisible(hwnd):
+            window_title = win32gui.GetWindowText(hwnd)
+            if "AssaultCube" in window_title or "AC_" in window_title or "cube" in window_title.lower():
+                windows.append((hwnd, window_title))
+        return True
+    
+    windows = []
+    win32gui.EnumWindows(enum_windows_callback, windows)
+    return windows
+
 class CS16Env:
-    def __init__(self, region=None):
+    def __init__(self, region=None, target_window=None):
         self.region = region
+        self.target_window = target_window
+        self.target_hwnd = None
+          # Find target window
+        game_windows = find_game_window()
+        print(f"Found {len(game_windows)} game windows: {game_windows}")
+        
+        if target_window:
+            for hwnd, title in game_windows:
+                if target_window in title:
+                    self.target_hwnd = hwnd
+                    print(f"Found target window: {title} (HWND: {hwnd})")
+                    break
+        
+        if not self.target_hwnd and game_windows:
+            # Use first available game window
+            self.target_hwnd = game_windows[0][0]
+            print(f"Using first available game window: {game_windows[0][1]}")
+        
+        if not self.target_hwnd:
+            print("Warning: No game window found. Input may not work.")
+        
         self.actions = [
             ('w',), ('a',), ('s',), ('d',),
             ('w','mouse_left'), ('w','mouse_right'),
             ('a','mouse_left'), ('a','mouse_right'),
-            ('s','mouse_left'), ('s','mouse_right'),
-            ('d','mouse_left'), ('d','mouse_right')
+            ('s','mouse_left'), ('s','mouse_right'),            ('d','mouse_left'), ('d','mouse_right')
         ]
         self.held_keys = set()
         
     def reset(self):
         for key in list(self.held_keys):
-            pydirectinput.keyUp(key)
+            try:
+                pydirectinput.keyUp(key)
+            except Exception as e:
+                print(f"Failed to release {key}: {e}")
         self.held_keys.clear()
         
     def step(self, action):
         used_wasd = False
         used_mouse = False
         
-        if isinstance(action, tuple) or isinstance(action, list):
+        # Parse action
+        current_wasd = None
+        mouse = None
+        
+        if isinstance(action, int):
+            # Action index from action space
+            if 0 <= action < len(self.actions):
+                action_tuple = self.actions[action]
+                if len(action_tuple) == 1:
+                    current_wasd = action_tuple[0]
+                elif len(action_tuple) == 2:
+                    current_wasd, mouse = action_tuple
+        elif isinstance(action, (tuple, list)):
             if len(action) == 2:
-                key, mouse = action
-            else:
-                key = action[0]
-                mouse = None
-        else:
-            key = action
-            mouse = None
-            
-        current_wasd = key if key in ['w', 'a', 's', 'd'] else None
+                current_wasd, mouse = action
+            elif len(action) == 1:
+                current_wasd = action[0]        # Release keys that are no longer needed
         for held_key in list(self.held_keys):
             if held_key != current_wasd:
-                pydirectinput.keyUp(held_key)
+                try:
+                    pydirectinput.keyUp(held_key)
+                except Exception as e:
+                    print(f"Failed to release {held_key}: {e}")
                 self.held_keys.remove(held_key)
         
+        # Press new key if needed
         if current_wasd and current_wasd not in self.held_keys:
-            pydirectinput.keyDown(current_wasd)
-            self.held_keys.add(current_wasd)
-            used_wasd = True
+            try:
+                pydirectinput.keyDown(current_wasd)
+                self.held_keys.add(current_wasd)
+                used_wasd = True
+            except Exception as e:
+                print(f"Failed to press {current_wasd}: {e}")
         elif current_wasd:
             used_wasd = True
             
+        # Mouse movement
         if mouse == 'mouse_left':
-            move_mouse_relative(-50, 0)
-            used_mouse = True
+            try:
+                move_mouse_relative(-50, 0)
+                used_mouse = True
+            except Exception as e:
+                print(f"Failed mouse left: {e}")
         elif mouse == 'mouse_right':
-            move_mouse_relative(50, 0)
-            used_mouse = True
+            try:
+                move_mouse_relative(50, 0)
+                used_mouse = True
+            except Exception as e:
+                print(f"Failed mouse right: {e}")
             
         obs = grab_screen(self.region)
         reward = np.random.random()
@@ -615,3 +681,26 @@ if __name__ == "__main__":
         subprocess.run(["python", "multi_instance_launcher.py"])
     else:
         print("Invalid choice")
+
+def send_key_to_window(hwnd, key, press=True):
+    """Send key directly to window without focus"""
+    if key == 'w':
+        vk_code = 0x57
+    elif key == 'a':
+        vk_code = 0x41
+    elif key == 's':
+        vk_code = 0x53
+    elif key == 'd':
+        vk_code = 0x44
+    else:
+        return False
+    
+    try:
+        if press:
+            win32gui.SendMessage(hwnd, win32con.WM_KEYDOWN, vk_code, 0)
+        else:
+            win32gui.SendMessage(hwnd, win32con.WM_KEYUP, vk_code, 0)
+        return True
+    except Exception as e:
+        print(f"Failed to send key {key} to window: {e}")
+        return False
