@@ -8,43 +8,67 @@ import socket
 
 def start_xvfb():
     """Start virtual display"""
-    # Generate unique display number based on hostname
-    hostname = socket.gethostname()
-    display_num = 99
-    if hostname:
-        # Extract number from hostname (e.g., ai_training-bot-1 -> 1)
-        import re
-        match = re.search(r'-(\d+)$', hostname)
-        if match:
-            display_num = 99 + int(match.group(1))    
+    # Generate unique display number based on container ID
+    import random
+    display_num = random.randint(100, 999)
+    
+    # Check if display is already in use, increment if needed
+    while os.path.exists(f"/tmp/.X{display_num}-lock"):
+        display_num += 1
+        if display_num > 999:
+            display_num = 100
+    
     display = f":{display_num}"
     os.environ['DISPLAY'] = display
     
-    cmd = ["Xvfb", display, "-screen", "0", "1920x1080x24", "-nolisten", "tcp", "-ac", "+extension", "GLX"]
-    subprocess.Popen(cmd)
-    time.sleep(2)
+    print(f"Starting Xvfb on display {display}")
+    
+    # Start Xvfb with MIT-SHM disabled to avoid shared memory issues
+    cmd = ["Xvfb", display, "-screen", "0", "1920x1080x24", "-nolisten", "tcp", "-ac", 
+           "+extension", "GLX", "-extension", "MIT-SHM"]
+    proc = subprocess.Popen(cmd)
+    time.sleep(3)
     
     # Create dummy Xauthority file
     subprocess.run(["touch", "/root/.Xauthority"], check=True)
     subprocess.run(["xauth", "add", display, ".", "1234567890abcdef"], check=True)
     
-def start_assaultcube():
+    return display_num
+    
+def start_assaultcube(display_num):
     """Start AssaultCube in background on specific empty map"""
     os.chdir('/opt/assaultcube')
     
-    # Start AssaultCube and then execute commands via config
-    cmd = ["./assaultcube.sh", "--home=/root/.assaultcube/v1.3", "--init"]
-    proc = subprocess.Popen(cmd)
-    time.sleep(8)
+    print(f"Starting AssaultCube on display :{display_num}")
     
-    # Send commands to load map and configure
-    time.sleep(2)
-    subprocess.run(["xdotool", "type", "map ac_depot"], check=False)
-    subprocess.run(["xdotool", "key", "Return"], check=False)
-    time.sleep(1)
-    subprocess.run(["xdotool", "type", "maxclients 1"], check=False)
-    subprocess.run(["xdotool", "key", "Return"], check=False)
-    time.sleep(1)
+    # Create a config file to force GPU rendering and set map
+    config_content = """
+// Force GPU acceleration
+r_vsync 0
+maxfps 0
+
+// Load specific map
+map ac_depot
+maxclients 1
+"""
+    
+    config_dir = "/root/.assaultcube/v1.3/config"
+    os.makedirs(config_dir, exist_ok=True)
+    
+    with open(f"{config_dir}/autoexec.cfg", "w") as f:
+        f.write(config_content)
+    
+    # Start AssaultCube with GPU acceleration forced
+    env = os.environ.copy()
+    env['LIBGL_ALWAYS_SOFTWARE'] = '0'
+    env['NVIDIA_VISIBLE_DEVICES'] = 'all'
+    env['NVIDIA_DRIVER_CAPABILITIES'] = 'all'
+    
+    cmd = ["./assaultcube.sh", "--home=/root/.assaultcube/v1.3", "--init"]
+    proc = subprocess.Popen(cmd, env=env)
+    time.sleep(10)
+    
+    print("AssaultCube started, waiting for initialization...")
 
 def run_data_collection():
     """Run data collection script"""
@@ -95,8 +119,8 @@ def run_data_collection():
 
 if __name__ == "__main__":
     print("Starting container...")
-    start_xvfb()
-    start_assaultcube()
+    display_num = start_xvfb()
+    start_assaultcube(display_num)
     
     # Check GPU availability
     try:
@@ -104,6 +128,7 @@ if __name__ == "__main__":
         result = subprocess.run(['nvidia-smi'], capture_output=True, text=True)
         if result.returncode == 0:
             print("GPU detected and available")
+            print(result.stdout)
         else:
             print("GPU not available, using CPU rendering")
     except:
