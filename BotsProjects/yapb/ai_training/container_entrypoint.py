@@ -32,18 +32,19 @@ def start_assaultcube():
     """Start AssaultCube in background on specific empty map"""
     os.chdir('/opt/assaultcube')
     
-    # Start with a specific empty map (ac_depot is good for training)
-    # The command loads the map directly without bots
-    cmd = [
-        "./assaultcube.sh", 
-        "--home=/root/.assaultcube/v1.3",
-        "--init",
-        "-c", "map ac_depot",
-        "-c", "maxclients 1",
-        "-c", "numclient 0"
-    ]
-    subprocess.Popen(cmd)
-    time.sleep(5)
+    # Start AssaultCube and then execute commands via config
+    cmd = ["./assaultcube.sh", "--home=/root/.assaultcube/v1.3", "--init"]
+    proc = subprocess.Popen(cmd)
+    time.sleep(8)
+    
+    # Send commands to load map and configure
+    time.sleep(2)
+    subprocess.run(["xdotool", "type", "map ac_depot"], check=False)
+    subprocess.run(["xdotool", "key", "Return"], check=False)
+    time.sleep(1)
+    subprocess.run(["xdotool", "type", "maxclients 1"], check=False)
+    subprocess.run(["xdotool", "key", "Return"], check=False)
+    time.sleep(1)
 
 def run_data_collection():
     """Run data collection script"""
@@ -96,4 +97,17 @@ if __name__ == "__main__":
     print("Starting container...")
     start_xvfb()
     start_assaultcube()
-    run_data_collection()
+    
+    # Check GPU availability
+    try:
+        import subprocess
+        result = subprocess.run(['nvidia-smi'], capture_output=True, text=True)
+        if result.returncode == 0:
+            print("GPU detected and available")
+        else:
+            print("GPU not available, using CPU rendering")
+    except:
+        print("nvidia-smi not found, using CPU rendering")
+    
+    # Run the main experiments script with menu
+    subprocess.run(['python', '/app/container_experiments.py'], cwd='/app')
