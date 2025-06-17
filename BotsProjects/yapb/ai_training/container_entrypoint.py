@@ -40,16 +40,10 @@ def start_assaultcube(display_num):
     os.chdir('/opt/assaultcube')
     
     print(f"Starting AssaultCube on display :{display_num}")
-    
-    # Create a config file to force GPU rendering and set map
+      # Create a config file to force GPU rendering and set map
     config_content = """
-// Force GPU acceleration
-r_vsync 0
-maxfps 0
-
 // Load specific map
 map ac_depot
-maxclients 1
 """
     
     config_dir = "/root/.assaultcube/v1.3/config"
@@ -133,6 +127,5 @@ if __name__ == "__main__":
             print("GPU not available, using CPU rendering")
     except:
         print("nvidia-smi not found, using CPU rendering")
-    
-    # Run the main experiments script with menu
-    subprocess.run(['python', '/app/container_experiments.py'], cwd='/app')
+      # Run the main experiments script with menu
+    subprocess.run(['python3', '/app/container_experiments.py'], cwd='/app')
