@@ -68,9 +68,9 @@ def grab_screen(region=None):
 
 class CS16Env:
     def __init__(self, region=None):
-        self.region = region
-        # Macro actions: always WASD + mouse combination
+        self.region = region        # WASD-only actions (preferred) + WASD+mouse combinations (for when stuck)
         self.actions = [
+            ('w',), ('a',), ('s',), ('d',),  # WASD-only actions
             ('w','mouse_left'), ('w','mouse_right'),
             ('a','mouse_left'), ('a','mouse_right'),
             ('s','mouse_left'), ('s','mouse_right'),
@@ -147,17 +147,21 @@ def stack_frames(new_frame):
     return np.stack(frame_stack, axis=0)
 
 class DQN(nn.Module):
-    def __init__(self, in_channels=4, n_actions=6):
+    def __init__(self, in_channels=4, n_actions=12):
         super().__init__()
         self.net = nn.Sequential(
-            nn.Conv2d(in_channels, 16, 8, stride=4),
+            nn.Conv2d(in_channels, 64, 8, stride=4),  # 4x more channels
             nn.ReLU(),
-            nn.Conv2d(16, 32, 4, stride=2),
+            nn.Conv2d(64, 128, 4, stride=2),  # 4x more channels
+            nn.ReLU(),
+            nn.Conv2d(128, 128, 3, stride=1),  # Extra conv layer
             nn.ReLU(),
             nn.Flatten(),
-            nn.Linear(32*9*9, 256),
+            nn.Linear(128*7*7, 1024),  # Much larger dense layer
             nn.ReLU(),
-            nn.Linear(256, n_actions)
+            nn.Dropout(0.3),  # Regularization
+            nn.Linear(1024, 512),  # Extra dense layer
+            nn.ReLU(),            nn.Linear(512, n_actions)
         )
     def forward(self, x):
         return self.net(x)
@@ -170,14 +174,20 @@ class ReplayBuffer:
         if len(self.buffer) >= self.capacity:
             self.buffer.pop(0)
         self.buffer.append(exp)
+    
     def sample(self, batch_size):
-        recent = self.buffer[-50:] if len(self.buffer) >= 50 else self.buffer
-        n_recent = batch_size // 2
+        # More sophisticated sampling for larger batches
+        if len(self.buffer) < batch_size:
+            return self.buffer
+        
+        recent = self.buffer[-200:] if len(self.buffer) >= 200 else self.buffer
+        n_recent = min(batch_size // 3, len(recent))  # 1/3 recent experiences
         n_random = batch_size - n_recent
+        
         batch = []
-        if recent:
+        if recent and n_recent > 0:
             batch.extend(random.choices(recent, k=n_recent))
-        if len(self.buffer) > 0:
+        if len(self.buffer) > 0 and n_random > 0:
             batch.extend(random.choices(self.buffer, k=n_random))
         return batch
 
@@ -187,9 +197,9 @@ dqn = DQN(in_channels=4, n_actions=len(env.actions)).to(device)
 target_dqn = DQN(in_channels=4, n_actions=len(env.actions)).to(device)
 target_dqn.load_state_dict(dqn.state_dict())
 target_dqn.eval()
-optimizer = optim.Adam(dqn.parameters(), lr=1e-4)
-buffer = ReplayBuffer(10000)
-BATCH_SIZE = 32
+optimizer = optim.Adam(dqn.parameters(), lr=3e-4)
+buffer = ReplayBuffer(100000)  # 10x larger buffer
+BATCH_SIZE = 256  # Massive batch size for your 4080
 GAMMA = 0.99
 rewards = []
 
@@ -201,7 +211,7 @@ prev_frame = obs
 stuck_counter = 0
 STUCK_LIMIT = 20
 STUCK_THRESH = 1e-4
-TARGET_UPDATE_FREQ = 1000
+TARGET_UPDATE_FREQ = 200  # More frequent updates with bigger batches
 
 for step in range(10000):
     # ε-greedy over macro-actions
@@ -217,9 +227,7 @@ for step in range(10000):
     obs2_proc = preprocess(obs2)
     next_state = stack_frames(obs2_proc)
     diff = np.abs(obs2_proc.astype(np.float32) - prev_frame.astype(np.float32))
-    reward = np.mean(diff)
-    
-    # Enhanced stuck detection
+    reward = np.mean(diff)    # Enhanced stuck detection
     if reward < STUCK_THRESH:
         stuck_counter += 1
         if stuck_counter > 5:
@@ -228,33 +236,61 @@ for step in range(10000):
             reward = -0.2
     else:
         stuck_counter = 0
-    prev_frame = obs2_proc
-
-    # --- Novelty exploration reward with dual-control gating ---
+    prev_frame = obs2_proc# --- Enhanced exploration system ---
+    # Fine-grained novelty (existing)
     small_obs = cv2.resize(obs2_proc, (16, 16)).astype(np.uint8)
     novelty_hash = tuple(small_obs.flatten())
+      # Coarse exploration tracking - much coarser than before
+    region_obs = cv2.resize(obs2_proc, (2, 2)).astype(np.uint8)
+    region_hash = tuple(region_obs.flatten())
+    
+    # Ultra-coarse area tracking for camping detection
+    area_obs = cv2.resize(obs2_proc, (1, 2)).astype(np.uint8)  # Just 2 pixels
+    area_hash = tuple(area_obs.flatten())
+    
     if not hasattr(globals(), 'novelty_set'):
         novelty_set = set()
         novelty_history = deque(maxlen=1000)
         action_history = deque(maxlen=10)
         mouse_direction_history = deque(maxlen=8)
+        region_set = set()
+        region_history = deque(maxlen=80)
+        region_visit_count = {}
+        area_history = deque(maxlen=30)
         globals()['novelty_set'] = novelty_set
         globals()['novelty_history'] = novelty_history
         globals()['action_history'] = action_history
         globals()['mouse_direction_history'] = mouse_direction_history
+        globals()['region_set'] = region_set
+        globals()['region_history'] = region_history
+        globals()['region_visit_count'] = region_visit_count
+        globals()['area_history'] = area_history
     else:
         novelty_set = globals()['novelty_set']
         novelty_history = globals()['novelty_history']
         action_history = globals()['action_history']
         mouse_direction_history = globals()['mouse_direction_history']
+        region_set = globals()['region_set']
+        region_history = globals()['region_history']
+        region_visit_count = globals()['region_visit_count']
+        area_history = globals()['area_history']
     used_wasd = info.get('used_wasd', False)
-    used_mouse = info.get('used_mouse', False)
+    used_mouse = info.get('used_mouse', False)    # Strategic mouse incentive - encourage mouse when stuck
+    if stuck_counter > 2 and used_mouse:
+        reward += 0.8  # Much bigger bonus for using mouse when stuck
       # Track action patterns for anti-gaming
     action_history.append(action)
     if len(action) == 2 and action[1] == 'mouse_left':
         mouse_direction_history.append('left')
     elif len(action) == 2 and action[1] == 'mouse_right':
         mouse_direction_history.append('right')
+    
+    # Action spam detection - punish repeated same actions
+    if len(action_history) >= 30:
+        recent_actions = list(action_history)[-30:]
+        same_action_count = recent_actions.count(action)
+        if same_action_count >= 15:  # Same action 15+ times in last 30 steps
+            reward = -3.0  # Massive punishment for action spam
 
     if novelty_hash not in novelty_set and used_wasd and used_mouse and reward > STUCK_THRESH:
         reward += 0.3
@@ -264,14 +300,76 @@ for step in range(10000):
             to_remove = novelty_history.popleft()
             novelty_set.remove(to_remove)
     elif novelty_hash not in novelty_set:
-        reward -= 0.2
-      # Apply reward reduction instead of punishment for single input usage
-    if used_wasd and used_mouse:
-        pass
-    elif used_wasd or used_mouse:
-        reward *= 0.1
+        reward -= 0.2    # Track region visits and penalize camping
+    region_visit_count[region_hash] = region_visit_count.get(region_hash, 0) + 1
+    region_history.append(region_hash)
+    area_history.append(area_hash)
+    
+    # Movement stagnation detection - same region for multiple steps
+    if len(region_history) >= 5:
+        recent_regions_for_movement = list(region_history)[-5:]
+        if len(set(recent_regions_for_movement)) == 1:  # Same region for 5 steps
+            reward = -2.5  # Heavy punishment for not moving
+      # Major exploration bonuses - but only for genuinely new areas
+    if region_hash not in region_set:
+        region_set.add(region_hash)
+        reward += 1.0  # Big bonus for new areas
+    
+    # Ultra-harsh camping penalty using multiple resolution tracking
+    recent_areas = list(area_history)[-15:]  # Shorter window, more aggressive
+    if len(recent_areas) >= 10:  # Trigger sooner
+        unique_areas = len(set(recent_areas))
+        if unique_areas <= 1:
+            reward -= 8.0  # Nuclear penalty for staying put
+        elif unique_areas <= 2:
+            reward -= 5.0  # Massive penalty for minimal movement
+        elif unique_areas <= 3:
+            reward -= 3.0  # Heavy penalty for very limited exploration
+    
+    # Tunnel running detection - more aggressive
+    recent_regions = list(region_history)[-8:]  # Shorter window
+    if len(recent_regions) >= 6:  # Trigger sooner
+        unique_recent = len(set(recent_regions))
+        if unique_recent <= 2:
+            reward -= 4.0  # Massive penalty for back-and-forth
+        elif unique_recent <= 3:
+            reward -= 2.0  # Heavy penalty for limited area coverage
+    
+    # Progressive visit frequency punishment - more aggressive
+    visit_count = region_visit_count[region_hash]
+    if visit_count > 3:  # Trigger sooner
+        visit_penalty = min(2.0, visit_count * 0.2)  # Much harsher scaling
+        reward -= visit_penalty
+    
+    # Oscillation detection (back-and-forth movement) - more sensitive
+    if len(region_history) >= 4:  # Shorter pattern detection
+        last_4 = list(region_history)[-4:]
+        if len(set(last_4)) <= 2 and len(last_4) == 4:
+            reward -= 3.0  # Punish oscillation patterns harder
+    
+    # Fallback anti-camping: if reward is still positive after penalties, force negative
+    if stuck_counter == 0 and reward > 0.5:  # If somehow still getting good rewards
+        recent_unique = len(set(list(area_history)[-10:]))
+        if recent_unique <= 2:
+            reward = -2.0  # Force negative for camping# Apply reward adjustments with strong WASD-only preference
+    # BUT respect stuck detection first
+    if stuck_counter > 0:
+        # When stuck, don't override the negative stuck rewards
+        if used_wasd and used_mouse and stuck_counter > 3:
+            # Only bonus for mouse when severely stuck
+            reward += 0.2
     else:
-        reward *= 0.05
+        # When not stuck, apply normal WASD preference
+        base_reward = max(0.01, reward)
+        
+        if used_wasd and used_mouse:
+            reward = base_reward + 0.3  # Bonus for using both inputs
+        elif used_wasd:
+            reward = base_reward + 0.1  # Smaller bonus for WASD-only
+        elif used_mouse:
+            reward = base_reward * 0.1
+        else:
+            reward = base_reward * 0.05
     
     # Anti-gaming mechanisms
     gaming_penalty = 0.0
@@ -299,7 +397,19 @@ for step in range(10000):
                 for i in range(len(recent_mouse)-1)
             )
             if is_alternating:
-                gaming_penalty += 0.5
+                gaming_penalty += 0.5    # Punish consecutive mouse usage (anti-spam) - very lenient approach
+    consecutive_mouse = 0
+    for i in range(min(20, len(action_history))):
+        action_check = list(action_history)[-(i+1)]
+        if len(action_check) == 2:  # Has mouse component
+            consecutive_mouse += 1
+        else:
+            break
+    
+    if consecutive_mouse >= 15:  # Allow up to 15 consecutive mouse actions
+        gaming_penalty += 0.3  # Light penalty for extreme spam
+    elif consecutive_mouse >= 20:  # Very heavy spam
+        gaming_penalty += 0.6
     
     # Apply gaming penalties
     if gaming_penalty > 0:
