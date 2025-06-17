@@ -7,8 +7,7 @@ services:
       - NVIDIA_VISIBLE_DEVICES=all
       - NVIDIA_DRIVER_CAPABILITIES=all
       - BOT_MODE=${BOT_MODE:-collect}
-    ports:
-      - "6000-6020:6000-6020"
+    # Remove port mapping to allow scaling - VNC will be accessible via container IP
     volumes:
       - ./training_data:/data
       - /tmp/.X11-unix:/tmp/.X11-unix
