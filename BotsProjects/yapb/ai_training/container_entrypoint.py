@@ -34,16 +34,15 @@ def start_xvfb():
         if display_num > 999:
             display_num = 100
         attempts += 1
-    
-    if attempts >= max_attempts:
-        print(f"Warning: Could not find free display after {max_attempts} attempts, using {display_num}")
+        if attempts >= max_attempts:
+            print(f"Warning: Could not find free display after {max_attempts} attempts, using {display_num}")
     
     display = f":{display_num}"
     os.environ['DISPLAY'] = display
     
-    print(f"Starting Xvfb on display {display} (PID: {os.getpid()})")    
-    # Start Xvfb with MIT-SHM disabled to avoid shared memory issues
-    cmd = ["Xvfb", display, "-screen", "0", "1920x1080x24", "-nolisten", "tcp", "-ac", 
+    print(f"Starting Xvfb on display {display} (PID: {os.getpid()})")
+    # Start Xvfb with MIT-SHM disabled and TCP enabled for VNC
+    cmd = ["Xvfb", display, "-screen", "0", "1920x1080x24", "-ac", 
            "+extension", "GLX", "-extension", "MIT-SHM"]
     proc = subprocess.Popen(cmd)
     time.sleep(3)
