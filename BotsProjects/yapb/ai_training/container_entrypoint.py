@@ -21,8 +21,7 @@ def start_xvfb():
     display = f":{display_num}"
     os.environ['DISPLAY'] = display
     
-    print(f"Starting Xvfb on display {display}")
-    
+    print(f"Starting Xvfb on display {display}")    
     # Start Xvfb with MIT-SHM disabled to avoid shared memory issues
     cmd = ["Xvfb", display, "-screen", "0", "1920x1080x24", "-nolisten", "tcp", "-ac", 
            "+extension", "GLX", "-extension", "MIT-SHM"]
@@ -33,6 +32,15 @@ def start_xvfb():
     subprocess.run(["touch", "/root/.Xauthority"], check=True)
     subprocess.run(["xauth", "add", display, ".", "1234567890abcdef"], check=True)
     
+    # Start VNC server on unique port based on display number
+    vnc_port = 5900 + display_num
+    print(f"Starting VNC server on port {vnc_port}")
+    vnc_cmd = ["x11vnc", "-display", display, "-rfbport", str(vnc_port), 
+               "-forever", "-shared", "-bg", "-nopw"]
+    subprocess.Popen(vnc_cmd)
+    time.sleep(2)
+    
+    print(f"VNC server accessible at localhost:{vnc_port}")
     return display_num
     
 def start_assaultcube(display_num):
