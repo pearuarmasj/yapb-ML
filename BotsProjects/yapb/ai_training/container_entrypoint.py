@@ -29,9 +29,19 @@ def start_xvfb():
     subprocess.run(["xauth", "add", display, ".", "1234567890abcdef"], check=True)
     
 def start_assaultcube():
-    """Start AssaultCube in background"""
+    """Start AssaultCube in background on specific empty map"""
     os.chdir('/opt/assaultcube')
-    cmd = ["./assaultcube.sh", "--init"]
+    
+    # Start with a specific empty map (ac_depot is good for training)
+    # The command loads the map directly without bots
+    cmd = [
+        "./assaultcube.sh", 
+        "--home=/root/.assaultcube/v1.3",
+        "--init",
+        "-c", "map ac_depot",
+        "-c", "maxclients 1",
+        "-c", "numclient 0"
+    ]
     subprocess.Popen(cmd)
     time.sleep(5)
 

@@ -1,7 +1,9 @@
-FROM ubuntu:22.04
+FROM nvidia/opengl:1.2-glvnd-runtime-ubuntu22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV DISPLAY=:99
+ENV NVIDIA_VISIBLE_DEVICES=all
+ENV NVIDIA_DRIVER_CAPABILITIES=all
 
 RUN apt-get update && apt-get install -y \
     python3 \
@@ -13,8 +15,6 @@ RUN apt-get update && apt-get install -y \
     unzip \
     libgl1-mesa-glx \
     libglu1-mesa \
-    libnvidia-gl-515 \
-    nvidia-utils-515 \
     libopenal1 \
     libvorbis0a \
     libvorbisfile3 \

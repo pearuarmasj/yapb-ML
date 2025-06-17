@@ -298,6 +298,10 @@ def collect_assaultcube_data():
     
     print("Starting data collection...")
     print("Bot will take random actions and save training data.")
+    print("Debug screenshots will be saved every 500 steps to /data/screenshots/")
+    
+    # Take initial screenshot
+    save_debug_screenshot(region, "initial_state")
     
     obs = collector.reset()
     total_samples = 10000
@@ -309,11 +313,19 @@ def collect_assaultcube_data():
         if done:
             obs = collector.reset()
             
-        if step % 1000 == 0:
+        # Save debug screenshots periodically
+        if step % 500 == 0:
             print(f"Progress: {step}/{total_samples} samples collected")
+            save_debug_screenshot(region, f"step_{step}")
+        elif step % 100 == 0:
+            print(f"Progress: {step}/{total_samples} samples collected")
+    
+    # Take final screenshot
+    save_debug_screenshot(region, "final_state")
     
     collector.save_data()
     print(f"Data collection complete! Collected {total_samples} samples.")
+    print("Check /data/screenshots/ for debug screenshots of bot activity.")
 
 def train_from_data():
     print("Use the separate offline_trainer.py script for training from collected data.")
@@ -443,6 +455,26 @@ def get_instance_config():
         'region': region
     }
 
+def save_debug_screenshot(region=None, filename_prefix="debug_screenshot"):
+    """Save a screenshot for debugging purposes"""
+    import datetime
+    try:
+        screenshot = grab_screen(region)
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"/data/screenshots/{filename_prefix}_{timestamp}.png"
+        
+        # Create screenshots directory if it doesn't exist
+        os.makedirs("/data/screenshots", exist_ok=True)
+        
+        # Convert RGB to BGR for OpenCV
+        screenshot_bgr = cv2.cvtColor(screenshot, cv2.COLOR_RGB2BGR)
+        cv2.imwrite(filename, screenshot_bgr)
+        print(f"Debug screenshot saved: {filename}")
+        return filename
+    except Exception as e:
+        print(f"Failed to save debug screenshot: {e}")
+        return None
+
 if __name__ == "__main__":
     if "--instance-mode" in sys.argv:
         config = get_instance_config()
@@ -500,39 +532,38 @@ if __name__ == "__main__":
                 print(f"Training steps {i} to {i + remaining} of {total_steps}")
                 model.learn(total_timesteps=remaining, reset_num_timesteps=False)
                 print(f"Completed {i + remaining}/{total_steps} steps")
-            
-            model.save(f"assaultcube_ppo_instance_{config['instance_id']}")
+                model.save(f"assaultcube_ppo_instance_{config['instance_id']}")
             env.close()
         
         sys.exit(0)
     
+    # Normal interactive mode
     print("Choose experiment:")
-    print("1. Basic CartPole")
-    print("2. Atari Breakout") 
-    print("3. Algorithm Comparison")
-    print("4. Hyperparameter Tuning")
-    print("5. Train AssaultCube with PPO (Real-time)")
-    print("6. Collect AssaultCube Data (Offline)")
-    print("7. Train from Collected Data")
-    print("8. Test Trained Model")
+    print("1. Collect AssaultCube Data Only")
+    print("2. Train from Collected Data") 
+    print("3. Collect Data + Train Simultaneously")
+    print("4. Test Trained Model")
     
-    choice = input("Enter choice (1-8): ")
+    choice = input("Enter choice (1-4): ")
     
     if choice == "1":
-        basic_cartpole()
-    elif choice == "2":
-        atari_experiment()
-    elif choice == "3":
-        algorithm_comparison()
-    elif choice == "4":
-        hyperparameter_tuning()
-    elif choice == "5":
-        train_assaultcube_ppo()
-    elif choice == "6":
         collect_assaultcube_data()
-    elif choice == "7":
+    elif choice == "2":
         train_from_data()
-    elif choice == "8":
+    elif choice == "3":
+        print("Starting data collection and training...")
+        import threading
+        import time
+        
+        # Start data collection in background
+        collection_thread = threading.Thread(target=collect_assaultcube_data)
+        collection_thread.daemon = True
+        collection_thread.start()
+        
+        # Wait a bit for initial data, then start training
+        time.sleep(60)
+        train_from_data()
+    elif choice == "4":
         test_trained_model()
     else:
         print("Invalid choice")
