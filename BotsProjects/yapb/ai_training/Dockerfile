@@ -5,6 +5,7 @@ ENV DISPLAY=:99
 ENV NVIDIA_VISIBLE_DEVICES=all
 ENV NVIDIA_DRIVER_CAPABILITIES=all
 
+# Install system packages first (heavy layer that rarely changes)
 RUN apt-get update && apt-get install -y \
     python3 \
     python3-pip \
@@ -31,15 +32,18 @@ RUN apt-get update && apt-get install -y \
     fluxbox \
     && rm -rf /var/lib/apt/lists/*
 
+# Download and install AssaultCube (heavy layer that rarely changes)
 RUN wget -O /tmp/assaultcube.tar.bz2 https://github.com/assaultcube/AC/releases/download/v1.3.0.2/AssaultCube_v1.3.0.2_LockdownEdition_RC1.tar.bz2 \
     && mkdir -p /opt/assaultcube \
     && cd /opt/assaultcube \
     && tar -xjf /tmp/assaultcube.tar.bz2 \
     && rm /tmp/assaultcube.tar.bz2
 
+# Install Python packages (medium layer - only changes when requirements change)
 COPY requirements.txt /app/requirements.txt
 RUN pip3 install gymnasium numpy stable-baselines3 matplotlib opencv-python pyautogui psutil mss torch torchvision
 
+# Copy application code (light layer - changes frequently)
 COPY container_experiments.py /app/
 COPY container_entrypoint.py /app/
 

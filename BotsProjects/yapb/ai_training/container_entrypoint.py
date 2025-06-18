@@ -44,26 +44,18 @@ def start_vnc_server(display, display_num):
     subprocess.run(["pkill", "-f", "vnc"], check=False)
     subprocess.run(["pkill", "-f", "x11vnc"], check=False)
     time.sleep(2)
-    
-    # Create VNC directory and setup
+      # Create VNC directory and setup
     subprocess.run(["mkdir", "-p", "/root/.vnc"], check=True)
-      # Start x11vnc with robust settings for remote access
+    
     vnc_cmd = [
         "x11vnc", 
         "-display", display,
         "-rfbport", str(vnc_port),
-        "-forever",           # Keep running after client disconnects
-        "-shared",           # Allow multiple clients
-        "-nopw",             # No password
-        "-listen", "0.0.0.0", # Listen on all interfaces
-        "-noxdamage",        # Disable X damage extension (can cause issues)
-        "-noxfixes",         # Disable X fixes extension
-        "-noxinerama",       # Disable Xinerama extension
-        "-nomodtweak",       # Don't modify key mappings
-        "-noclipboard",      # Disable clipboard (can cause hangs)
-        "-nosel",            # Disable selection transfers
-        "-noprimary",        # Disable primary selection
-        "-o", "/data/vnc_output.log"  # Log output
+        "-forever",
+        "-nopw",
+        "-noxdamage",
+        "-noshm",
+        "-o", "/data/vnc_output.log"
     ]
     
     print(f"Starting VNC with command: {' '.join(vnc_cmd)}")
