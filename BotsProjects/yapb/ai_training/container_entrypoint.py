@@ -52,10 +52,20 @@ def start_xvfb():
     subprocess.run(["xauth", "add", display, ".", "1234567890abcdef"], check=True)    # Start VNC server on standard port 5900
     vnc_port = 5900
     print(f"Starting VNC server on port {vnc_port}")
+    
+    # Kill any existing VNC servers first
+    subprocess.run(["pkill", "-f", "x11vnc"], check=False)
+    time.sleep(1)
+    
+    # Start VNC with minimal options and foreground mode for debugging
     vnc_cmd = ["x11vnc", "-display", display, "-rfbport", str(vnc_port), 
-               "-forever", "-shared", "-bg", "-nopw", "-listen", "0.0.0.0"]
-    subprocess.Popen(vnc_cmd)
-    time.sleep(2)
+               "-forever", "-shared", "-nopw", "-listen", "0.0.0.0", 
+               "-autoport", "-noxdamage", "-noxfixes"]
+    
+    # Start VNC in background but capture output for debugging
+    with open("/data/vnc.log", "w") as f:
+        subprocess.Popen(vnc_cmd, stdout=f, stderr=f)
+    time.sleep(3)
     
     # Save VNC connection info for user
     instance_id = os.environ.get('INSTANCE_ID', get_unique_instance_id())
