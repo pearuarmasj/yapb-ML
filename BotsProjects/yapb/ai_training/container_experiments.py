@@ -28,54 +28,17 @@ def move_mouse_relative(x, y):
         pass
 
 def grab_screen(region=None):
-    import subprocess
-    import os
-    from PIL import Image
-    
-    try:
-        # Use xwd directly to capture to stdout, then pipe to convert for faster processing
-        display = os.environ.get('DISPLAY', ':0')
-        
-        if region:
-            # Capture full screen then crop - faster than processing pipeline
-            cmd = f'xwd -display {display} -root -silent | convert xwd:- png:-'
-            result = subprocess.run(cmd, shell=True, capture_output=True)
-            
-            if result.returncode == 0:
-                from io import BytesIO
-                img = Image.open(BytesIO(result.stdout))
-                img_array = np.array(img)
-                
-                if len(img_array.shape) == 3 and img_array.shape[2] > 3:
-                    img_array = img_array[..., :3]
-                    
-                # Crop to region
-                x, y, w, h = region["left"], region["top"], region["width"], region["height"]
-                img_array = img_array[y:y+h, x:x+w]
-                
-                return img_array
-        else:
-            # Full screen capture
-            cmd = f'xwd -display {display} -root -silent | convert xwd:- png:-'
-            result = subprocess.run(cmd, shell=True, capture_output=True)
-            
-            if result.returncode == 0:
-                from io import BytesIO
-                img = Image.open(BytesIO(result.stdout))
-                img_array = np.array(img)
-                
-                if len(img_array.shape) == 3 and img_array.shape[2] > 3:
-                    img_array = img_array[..., :3]
-                    
-                return img_array
-                
-    except Exception as e:
-        print(f"Screenshot failed: {e}")
-          # Fallback
     if region:
-        return np.zeros((region["height"], region["width"], 3), dtype=np.uint8)
+        with mss.mss() as sct:
+            monitor = {"top": region["top"], "left": region["left"], 
+                      "width": region["width"], "height": region["height"]}
+            img = np.array(sct.grab(monitor))
+            return img[..., :3]
     else:
-        return np.zeros((720, 1280, 3), dtype=np.uint8)
+        with mss.mss() as sct:
+            monitor = sct.monitors[1]
+            img = np.array(sct.grab(monitor))
+            return img[..., :3]
 
 def preprocess(frame, size=(84, 84)):
     frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)

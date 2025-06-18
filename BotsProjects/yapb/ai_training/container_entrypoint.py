@@ -112,11 +112,10 @@ def start_xvfb():
     
     display = f":{display_num}"
     os.environ['DISPLAY'] = display
-    
     print(f"Starting Xvfb on display {display} (PID: {os.getpid()})")
-    # Start Xvfb with better settings for VNC
+    # Start Xvfb with RANDR extension enabled for mss compatibility
     cmd = ["Xvfb", display, "-screen", "0", "1920x1080x24", "-ac", 
-           "+extension", "GLX", "-extension", "MIT-SHM", "-extension", "RANDR",
+           "+extension", "GLX", "+extension", "RANDR", "+extension", "RENDER",
            "-dpi", "96", "-noreset"]
     proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(3)
@@ -180,7 +179,7 @@ def start_xvfb():
         f.write(f"  - Check /data/vnc_debug.log for VNC server logs\n")
         f.write(f"  - Check /data/vnc_output.log for detailed output\n")
         f.write(f"  - Verify port forwarding in docker-compose.yml\n")
-    
+
     print(f"VNC connection info saved to /data/vnc_info_{instance_id}.txt")
     print(f"Container IP: {container_ip}")
     print(f"Connect with VNC viewer to: localhost:{vnc_port} (from host)")
