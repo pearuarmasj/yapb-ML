@@ -21,8 +21,15 @@ def get_unique_instance_id():
         return f"bot_{random.randint(1000, 9999)}"
 
 def find_free_vnc_port(start_port=5900, max_port=5950):
-    """Find a free VNC port"""
-    for port in range(start_port, max_port + 1):
+    """Find a free VNC port based on container instance"""
+    # Use a hash of container hostname/instance to get consistent port
+    import hashlib
+    instance_id = os.environ.get('INSTANCE_ID', f"container_{os.getpid()}")
+    port_offset = int(hashlib.md5(instance_id.encode()).hexdigest()[:4], 16) % 50
+    preferred_port = start_port + port_offset
+    
+    # Try the preferred port first, then scan if needed
+    for port in [preferred_port] + list(range(start_port, max_port + 1)):
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.settimeout(1)
@@ -210,17 +217,35 @@ def start_assaultcube(display_num):
     
     # Create entropy file
     with open(f"{private_dir}/entropy.dat", "w") as f:
-        f.write("entropy_data_placeholder\n")
-    
-    # Create autoexec config
+        f.write("entropy_data_placeholder\n")    # Create autoexec config
     config_content = """
-// Auto-generated config
+// Auto-generated config - offline mode
 map ac_depot
 sound 0
+mastermask 0
+autogetmap 0
+masterconnect 0
+allowmaster 0
+autoupdate 0
+authconnect 0
 """
     
     with open(f"{config_dir}/autoexec.cfg", "w") as f:
         f.write(config_content)
+    
+    # Create saved.cfg to override default settings
+    saved_config = """
+// Saved config - disable all authentication
+mastermask 0
+autogetmap 0
+masterconnect 0
+allowmaster 0
+autoupdate 0
+authconnect 0
+"""
+    
+    with open(f"{config_dir}/saved.cfg", "w") as f:
+        f.write(saved_config)
     
     # Start AssaultCube with proper environment
     env = os.environ.copy()
