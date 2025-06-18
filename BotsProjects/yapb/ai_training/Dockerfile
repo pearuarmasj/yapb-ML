@@ -11,7 +11,8 @@ RUN apt-get update && apt-get install -y \
     python3-pip \
     xvfb \
     x11vnc \
-    xdotool \    wget \
+    xdotool \
+    wget \
     unzip \
     libgl1-mesa-glx \
     libglu1-mesa \
