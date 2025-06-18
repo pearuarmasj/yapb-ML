@@ -29,52 +29,53 @@ def move_mouse_relative(x, y):
 
 def grab_screen(region=None):
     import subprocess
-    import tempfile
     import os
     from PIL import Image
     
     try:
+        # Use xwd directly to capture to stdout, then pipe to convert for faster processing
         display = os.environ.get('DISPLAY', ':0')
         
         if region:
-            cmd = ['xwd', '-display', display, '-root', '-out', '/tmp/screenshot.xwd']
-            subprocess.run(cmd, check=True, capture_output=True)
+            # Capture full screen then crop - faster than processing pipeline
+            cmd = f'xwd -display {display} -root -silent | convert xwd:- png:-'
+            result = subprocess.run(cmd, shell=True, capture_output=True)
             
-            cmd = ['convert', '/tmp/screenshot.xwd', '/tmp/screenshot.png']
-            subprocess.run(cmd, check=True, capture_output=True)
-            
-            img = Image.open('/tmp/screenshot.png')
-            img_array = np.array(img)
-            
-            if len(img_array.shape) == 3 and img_array.shape[2] > 3:
-                img_array = img_array[..., :3]
+            if result.returncode == 0:
+                from io import BytesIO
+                img = Image.open(BytesIO(result.stdout))
+                img_array = np.array(img)
                 
-            if region:
+                if len(img_array.shape) == 3 and img_array.shape[2] > 3:
+                    img_array = img_array[..., :3]
+                    
+                # Crop to region
                 x, y, w, h = region["left"], region["top"], region["width"], region["height"]
                 img_array = img_array[y:y+h, x:x+w]
                 
-            return img_array
+                return img_array
         else:
-            cmd = ['xwd', '-display', display, '-root', '-out', '/tmp/screenshot.xwd']
-            subprocess.run(cmd, check=True, capture_output=True)
+            # Full screen capture
+            cmd = f'xwd -display {display} -root -silent | convert xwd:- png:-'
+            result = subprocess.run(cmd, shell=True, capture_output=True)
             
-            cmd = ['convert', '/tmp/screenshot.xwd', '/tmp/screenshot.png']
-            subprocess.run(cmd, check=True, capture_output=True)
-            
-            img = Image.open('/tmp/screenshot.png')
-            img_array = np.array(img)
-            
-            if len(img_array.shape) == 3 and img_array.shape[2] > 3:
-                img_array = img_array[..., :3]
+            if result.returncode == 0:
+                from io import BytesIO
+                img = Image.open(BytesIO(result.stdout))
+                img_array = np.array(img)
                 
-            return img_array
+                if len(img_array.shape) == 3 and img_array.shape[2] > 3:
+                    img_array = img_array[..., :3]
+                    
+                return img_array
+                
     except Exception as e:
         print(f"Screenshot failed: {e}")
-        if region:
-            return np.zeros((region["height"], region["width"], 3), dtype=np.uint8)
-        else:
-            return np.zeros((720, 1280, 3), dtype=np.uint8)
-            return img[..., :3]
+          # Fallback
+    if region:
+        return np.zeros((region["height"], region["width"], 3), dtype=np.uint8)
+    else:
+        return np.zeros((720, 1280, 3), dtype=np.uint8)
 
 def preprocess(frame, size=(84, 84)):
     frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
