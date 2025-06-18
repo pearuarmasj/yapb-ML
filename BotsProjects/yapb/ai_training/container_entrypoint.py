@@ -20,8 +20,89 @@ def get_unique_instance_id():
         # Fallback to just random ID
         return f"bot_{random.randint(1000, 9999)}"
 
+def find_free_vnc_port(start_port=5900, max_port=5950):
+    """Find a free VNC port"""
+    for port in range(start_port, max_port + 1):
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(1)
+            result = sock.connect_ex(('127.0.0.1', port))
+            sock.close()
+            if result != 0:  # Port is free
+                return port
+        except:
+            continue
+    return start_port  # Fallback to default
+
+def start_vnc_server(display, display_num):
+    """Start VNC server with proper configuration"""
+    # Find a free VNC port
+    vnc_port = find_free_vnc_port()
+    print(f"Using VNC port: {vnc_port}")
+    
+    # Kill any existing VNC servers first
+    subprocess.run(["pkill", "-f", "vnc"], check=False)
+    subprocess.run(["pkill", "-f", "x11vnc"], check=False)
+    time.sleep(2)
+    
+    # Create VNC directory and setup
+    subprocess.run(["mkdir", "-p", "/root/.vnc"], check=True)
+      # Start x11vnc with robust settings for remote access
+    vnc_cmd = [
+        "x11vnc", 
+        "-display", display,
+        "-rfbport", str(vnc_port),
+        "-forever",           # Keep running after client disconnects
+        "-shared",           # Allow multiple clients
+        "-nopw",             # No password
+        "-listen", "0.0.0.0", # Listen on all interfaces
+        "-noxdamage",        # Disable X damage extension (can cause issues)
+        "-noxfixes",         # Disable X fixes extension
+        "-noxinerama",       # Disable Xinerama extension
+        "-nomodtweak",       # Don't modify key mappings
+        "-noclipboard",      # Disable clipboard (can cause hangs)
+        "-nosel",            # Disable selection transfers
+        "-noprimary",        # Disable primary selection
+        "-o", "/data/vnc_output.log"  # Log output
+    ]
+    
+    print(f"Starting VNC with command: {' '.join(vnc_cmd)}")
+      # Start VNC server in background using Popen
+    with open("/data/vnc_output.log", "w") as f:
+        proc = subprocess.Popen(vnc_cmd, stdout=f, stderr=subprocess.STDOUT)
+    
+    time.sleep(5)
+    
+    # Verify VNC is running
+    vnc_running = False
+    try:
+        # Check if x11vnc process is running
+        result = subprocess.run(["pgrep", "-f", "x11vnc"], capture_output=True, text=True)
+        if result.returncode == 0:
+            print(f"VNC server started successfully with PID: {result.stdout.strip()}")
+            vnc_running = True
+        else:
+            print("VNC server process not found")
+            
+        # Also check if port is listening
+        result = subprocess.run(["netstat", "-ln"], capture_output=True, text=True)
+        if f":{vnc_port}" in result.stdout:
+            print(f"VNC port {vnc_port} is listening")
+            vnc_running = True
+        else:
+            print(f"VNC port {vnc_port} is not listening")
+            
+    except Exception as e:
+        print(f"Could not check VNC status: {e}")
+    
+    if not vnc_running:
+        print("WARNING: VNC server may not be running properly")
+        print("Check /data/vnc_debug.log and /data/vnc_output.log for details")
+
+    return vnc_port
+
 def start_xvfb():
-    """Start virtual display"""
+    """Start virtual display and VNC server"""
     # Generate unique display number based on container process ID and random
     base_display = 100 + (os.getpid() % 800)  # Use PID for better uniqueness
     display_num = base_display + random.randint(0, 99)
@@ -41,42 +122,76 @@ def start_xvfb():
     os.environ['DISPLAY'] = display
     
     print(f"Starting Xvfb on display {display} (PID: {os.getpid()})")
-    # Start Xvfb with MIT-SHM disabled and TCP enabled for VNC
+    # Start Xvfb with better settings for VNC
     cmd = ["Xvfb", display, "-screen", "0", "1920x1080x24", "-ac", 
-           "+extension", "GLX", "-extension", "MIT-SHM"]
-    proc = subprocess.Popen(cmd)
+           "+extension", "GLX", "-extension", "MIT-SHM", "-extension", "RANDR",
+           "-dpi", "96", "-noreset"]
+    proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(3)
     
-    # Create dummy Xauthority file
+    # Verify Xvfb started
+    if not os.path.exists(f"/tmp/.X{display_num}-lock"):
+        print(f"Warning: Xvfb may not have started properly on display {display}")
+    
+    # Create Xauthority file
     subprocess.run(["touch", "/root/.Xauthority"], check=True)
-    subprocess.run(["xauth", "add", display, ".", "1234567890abcdef"], check=True)    # Start VNC server on standard port 5900
-    vnc_port = 5900
-    print(f"Starting VNC server on port {vnc_port}")
+    subprocess.run(["xauth", "add", display, ".", "1234567890abcdef"], check=True)
     
-    # Kill any existing VNC servers first
-    subprocess.run(["pkill", "-f", "x11vnc"], check=False)
-    time.sleep(1)
+    # Start window manager for better VNC experience
+    print("Starting window manager...")
+    subprocess.Popen(["fluxbox"], env=os.environ, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    time.sleep(2)
     
-    # Start VNC with minimal options and foreground mode for debugging
-    vnc_cmd = ["x11vnc", "-display", display, "-rfbport", str(vnc_port), 
-               "-forever", "-shared", "-nopw", "-listen", "0.0.0.0", 
-               "-autoport", "-noxdamage", "-noxfixes"]
+    # Start VNC server
+    vnc_port = start_vnc_server(display, display_num)
     
-    # Start VNC in background but capture output for debugging
-    with open("/data/vnc.log", "w") as f:
-        subprocess.Popen(vnc_cmd, stdout=f, stderr=f)
-    time.sleep(3)
+    # Get container IP address for connection info
+    container_ip = "unknown"
+    try:
+        # Try to get container IP from hostname command
+        result = subprocess.run(["hostname", "-I"], capture_output=True, text=True)
+        if result.returncode == 0 and result.stdout.strip():
+            container_ip = result.stdout.strip().split()[0]
+        else:
+            # Fallback method
+            result = subprocess.run(["ip", "route", "get", "1"], capture_output=True, text=True)
+            if result.returncode == 0:
+                for line in result.stdout.split('\n'):
+                    if 'src' in line:
+                        container_ip = line.split('src')[1].strip().split()[0]
+                        break
+    except Exception as e:
+        print(f"Could not determine container IP: {e}")
     
     # Save VNC connection info for user
     instance_id = os.environ.get('INSTANCE_ID', get_unique_instance_id())
     with open(f"/data/vnc_info_{instance_id}.txt", "w") as f:
-        f.write(f"Instance: {instance_id}\n")
+        f.write(f"=== VNC Connection Information ===\n")
+        f.write(f"Instance ID: {instance_id}\n")
         f.write(f"Display: {display}\n")
         f.write(f"VNC Port: {vnc_port}\n")
-        f.write(f"Container IP: You can find this with: docker inspect <container_name>\n")
-        f.write(f"To connect: Use VNC viewer to connect to <container_ip>:{vnc_port}\n")
+        f.write(f"Container IP: {container_ip}\n")
+        f.write(f"\n=== Connection Instructions ===\n")
+        f.write(f"From Host Machine:\n")
+        f.write(f"  Use VNC viewer to connect to: localhost:{vnc_port}\n")
+        f.write(f"  (Docker should forward port {vnc_port} to host)\n")
+        f.write(f"\n")
+        f.write(f"From Network:\n")
+        f.write(f"  Use VNC viewer to connect to: {container_ip}:{vnc_port}\n")
+        f.write(f"  (If container IP is accessible from your network)\n")
+        f.write(f"\n")
+        f.write(f"VNC Viewer Examples:\n")
+        f.write(f"  - TigerVNC, RealVNC, TightVNC\n")
+        f.write(f"  - Web browser: http://localhost:{vnc_port + 100} (if noVNC enabled)\n")
+        f.write(f"\n")
+        f.write(f"Troubleshooting:\n")
+        f.write(f"  - Check /data/vnc_debug.log for VNC server logs\n")
+        f.write(f"  - Check /data/vnc_output.log for detailed output\n")
+        f.write(f"  - Verify port forwarding in docker-compose.yml\n")
     
     print(f"VNC connection info saved to /data/vnc_info_{instance_id}.txt")
+    print(f"Container IP: {container_ip}")
+    print(f"Connect with VNC viewer to: localhost:{vnc_port} (from host)")
     return display_num
     
 def start_assaultcube(display_num):
@@ -131,7 +246,8 @@ sound 0
 def run_data_collection():
     """Run data collection script"""
     os.chdir('/app')
-      # Set environment for container mode
+    
+    # Set environment for container mode
     os.environ['CONTAINER_MODE'] = '1'
     os.environ['CAPTURE_REGION'] = '0,0,1920,1080'
     
@@ -203,4 +319,17 @@ if __name__ == "__main__":
     # Run the main experiments script with mode from environment
     bot_mode = os.environ.get('BOT_MODE', 'collect')
     print(f"Starting bot in mode: {bot_mode}")
-    subprocess.run(['python3', '/app/container_experiments.py', bot_mode], cwd='/app')
+    
+    # Keep container running for VNC access
+    if bot_mode == 'vnc':
+        print("VNC mode: Container will stay running for manual access")
+        print("Check /data/vnc_info_*.txt for connection details")
+        try:
+            while True:
+                time.sleep(60)
+                print(f"VNC server still running... Check logs at /data/vnc_output.log")
+        except KeyboardInterrupt:
+            print("Container shutting down...")
+    else:
+        # Run the experiments
+        subprocess.run(['python3', '/app/container_experiments.py', bot_mode], cwd='/app')

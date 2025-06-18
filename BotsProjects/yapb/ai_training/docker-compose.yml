@@ -8,7 +8,7 @@ services:
       - NVIDIA_DRIVER_CAPABILITIES=all
       - BOT_MODE=${BOT_MODE:-collect}
     ports:
-      - "5900:5900"  # Map VNC port directly
+      - "5900-5910:5900-5910"  # Map range of VNC ports for multiple containers
     volumes:
       - ./training_data:/data
       - /tmp/.X11-unix:/tmp/.X11-unix
@@ -21,3 +21,6 @@ services:
               capabilities: [gpu, utility, compute, graphics, display]
     stdin_open: true
     tty: true
+    cap_add:
+      - SYS_PTRACE  # Needed for some debugging tools
+    shm_size: 2gb   # Increase shared memory for better X11 performance

@@ -24,6 +24,11 @@ RUN apt-get update && apt-get install -y \
     libsdl2-image-2.0-0 \
     libsdl2-mixer-2.0-0 \
     xauth \
+    net-tools \
+    iputils-ping \
+    procps \
+    vim \
+    fluxbox \
     && rm -rf /var/lib/apt/lists/*
 
 RUN wget -O /tmp/assaultcube.tar.bz2 https://github.com/assaultcube/AC/releases/download/v1.3.0.2/AssaultCube_v1.3.0.2_LockdownEdition_RC1.tar.bz2 \
