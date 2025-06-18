@@ -28,16 +28,52 @@ def move_mouse_relative(x, y):
         pass
 
 def grab_screen(region=None):
-    if region:
-        with mss.mss() as sct:
-            monitor = {"top": region["top"], "left": region["left"], 
-                      "width": region["width"], "height": region["height"]}
-            img = np.array(sct.grab(monitor))
-            return img[..., :3]
-    else:
-        with mss.mss() as sct:
-            monitor = sct.monitors[1]
-            img = np.array(sct.grab(monitor))
+    import subprocess
+    import tempfile
+    import os
+    from PIL import Image
+    
+    try:
+        display = os.environ.get('DISPLAY', ':0')
+        
+        if region:
+            cmd = ['xwd', '-display', display, '-root', '-out', '/tmp/screenshot.xwd']
+            subprocess.run(cmd, check=True, capture_output=True)
+            
+            cmd = ['convert', '/tmp/screenshot.xwd', '/tmp/screenshot.png']
+            subprocess.run(cmd, check=True, capture_output=True)
+            
+            img = Image.open('/tmp/screenshot.png')
+            img_array = np.array(img)
+            
+            if len(img_array.shape) == 3 and img_array.shape[2] > 3:
+                img_array = img_array[..., :3]
+                
+            if region:
+                x, y, w, h = region["left"], region["top"], region["width"], region["height"]
+                img_array = img_array[y:y+h, x:x+w]
+                
+            return img_array
+        else:
+            cmd = ['xwd', '-display', display, '-root', '-out', '/tmp/screenshot.xwd']
+            subprocess.run(cmd, check=True, capture_output=True)
+            
+            cmd = ['convert', '/tmp/screenshot.xwd', '/tmp/screenshot.png']
+            subprocess.run(cmd, check=True, capture_output=True)
+            
+            img = Image.open('/tmp/screenshot.png')
+            img_array = np.array(img)
+            
+            if len(img_array.shape) == 3 and img_array.shape[2] > 3:
+                img_array = img_array[..., :3]
+                
+            return img_array
+    except Exception as e:
+        print(f"Screenshot failed: {e}")
+        if region:
+            return np.zeros((region["height"], region["width"], 3), dtype=np.uint8)
+        else:
+            return np.zeros((720, 1280, 3), dtype=np.uint8)
             return img[..., :3]
 
 def preprocess(frame, size=(84, 84)):

@@ -11,8 +11,7 @@ RUN apt-get update && apt-get install -y \
     python3-pip \
     xvfb \
     x11vnc \
-    xdotool \
-    wget \
+    xdotool \    wget \
     unzip \
     libgl1-mesa-glx \
     libglu1-mesa \
@@ -30,6 +29,8 @@ RUN apt-get update && apt-get install -y \
     procps \
     vim \
     fluxbox \
+    x11-apps \
+    imagemagick \
     && rm -rf /var/lib/apt/lists/*
 
 # Download and install AssaultCube (heavy layer that rarely changes)
@@ -41,7 +42,7 @@ RUN wget -O /tmp/assaultcube.tar.bz2 https://github.com/assaultcube/AC/releases/
 
 # Install Python packages (medium layer - only changes when requirements change)
 COPY requirements.txt /app/requirements.txt
-RUN pip3 install gymnasium numpy stable-baselines3 matplotlib opencv-python pyautogui psutil mss torch torchvision
+RUN pip3 install gymnasium numpy stable-baselines3 matplotlib opencv-python pyautogui psutil mss torch torchvision Pillow
 
 # Copy application code (light layer - changes frequently)
 COPY container_experiments.py /app/
