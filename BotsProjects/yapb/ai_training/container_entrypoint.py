@@ -248,14 +248,18 @@ def start_assaultcube(display_num):
     
     os.makedirs(config_dir, exist_ok=True)
     os.makedirs(private_dir, exist_ok=True)
-    
-    # Create missing auth config file
+      # Create missing auth config file
     with open(f"{private_dir}/authprivate.cfg", "w") as f:
-        f.write("// Auto-generated auth config\n")
+        f.write("// Auto-generated auth config - disable all authentication\n")
+        f.write("authconnect 0\n")
+        f.write("autoupdate 0\n")
+        f.write("mastermask 0\n")
     
     # Create entropy file
     with open(f"{private_dir}/entropy.dat", "w") as f:
-        f.write("entropy_data_placeholder\n")    # Create autoexec config
+        f.write("entropy_data_placeholder\n")
+    
+    # Create autoexec config
     config_content = """
 // Auto-generated config - offline mode
 map ac_depot
@@ -266,6 +270,8 @@ masterconnect 0
 allowmaster 0
 autoupdate 0
 authconnect 0
+showmenu 0
+menuset 0
 """
     
     with open(f"{config_dir}/autoexec.cfg", "w") as f:
@@ -273,19 +279,20 @@ authconnect 0
     
     # Create saved.cfg to override default settings
     saved_config = """
-// Saved config - disable all authentication
+// Saved config - disable all authentication and menus
 mastermask 0
 autogetmap 0
 masterconnect 0
 allowmaster 0
 autoupdate 0
 authconnect 0
+showmenu 0
+menuset 0
 """
     
     with open(f"{config_dir}/saved.cfg", "w") as f:
         f.write(saved_config)
-    
-    # Start AssaultCube with proper environment
+      # Start AssaultCube with proper environment
     env = os.environ.copy()
     env['LIBGL_ALWAYS_SOFTWARE'] = '0'
     env['NVIDIA_VISIBLE_DEVICES'] = 'all'
@@ -296,6 +303,28 @@ authconnect 0
     time.sleep(10)
     
     print("AssaultCube started, waiting for initialization...")
+    
+    # Auto-dismiss any remaining menus or prompts
+    time.sleep(5)
+    print("Auto-dismissing any remaining menus...")
+    try:
+        # Send Escape key multiple times to dismiss any menus
+        for _ in range(5):
+            subprocess.run(["xdotool", "key", "Escape"], check=False)
+            time.sleep(0.5)
+        
+        # Send Enter to confirm any remaining dialogs
+        subprocess.run(["xdotool", "key", "Return"], check=False)
+        time.sleep(1)
+        
+        # Additional Escape presses to ensure all menus are closed
+        for _ in range(3):
+            subprocess.run(["xdotool", "key", "Escape"], check=False)
+            time.sleep(0.3)
+            
+        print("Menu dismissal complete")
+    except Exception as e:
+        print(f"Warning: Could not auto-dismiss menus: {e}")
 
 def run_data_collection():
     """Run data collection script"""
