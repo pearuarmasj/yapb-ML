@@ -68,53 +68,62 @@ def start_vnc_server(display, display_num):
     # Kill any existing VNC servers first
     subprocess.run(["pkill", "-f", "vnc"], check=False)
     subprocess.run(["pkill", "-f", "x11vnc"], check=False)
-    time.sleep(2)
-      # Create VNC directory and setup
+    time.sleep(2)    # Create VNC directory and setup
     subprocess.run(["mkdir", "-p", "/root/.vnc"], check=True)
     
     vnc_cmd = [
         "x11vnc", 
         "-display", display,
         "-rfbport", str(vnc_port),
+        "-listen", "0.0.0.0",
         "-forever",
         "-nopw",
-        "-noxdamage",
-        "-noshm",
+        "-shared",
+        "-bg",
         "-o", "/data/vnc_output.log"
     ]
     
     print(f"Starting VNC with command: {' '.join(vnc_cmd)}")
-      # Start VNC server in background using Popen
-    with open("/data/vnc_output.log", "w") as f:
-        proc = subprocess.Popen(vnc_cmd, stdout=f, stderr=subprocess.STDOUT)
+    # Start VNC server in background using Popen
+    proc = subprocess.Popen(vnc_cmd)    
+    time.sleep(8)
     
-    time.sleep(5)
-    
-    # Verify VNC is running
+    # Verify VNC is running with better checks
     vnc_running = False
     try:
         # Check if x11vnc process is running
-        result = subprocess.run(["pgrep", "-f", "x11vnc"], capture_output=True, text=True)
+        result = subprocess.run(["pgrep", "-f", f"x11vnc.*{vnc_port}"], capture_output=True, text=True)
         if result.returncode == 0:
             print(f"VNC server started successfully with PID: {result.stdout.strip()}")
             vnc_running = True
         else:
             print("VNC server process not found")
             
-        # Also check if port is listening
-        result = subprocess.run(["netstat", "-ln"], capture_output=True, text=True)
+        # Check if port is listening on all interfaces
+        result = subprocess.run(["ss", "-tlnp"], capture_output=True, text=True)
         if f":{vnc_port}" in result.stdout:
             print(f"VNC port {vnc_port} is listening")
             vnc_running = True
+            # Show what interface it's listening on
+            for line in result.stdout.split('\n'):
+                if f":{vnc_port}" in line:
+                    print(f"  Listening: {line.strip()}")
         else:
             print(f"VNC port {vnc_port} is not listening")
+            print("Available listening ports:")
+            print(result.stdout)
             
     except Exception as e:
         print(f"Could not check VNC status: {e}")
     
     if not vnc_running:
         print("WARNING: VNC server may not be running properly")
-        print("Check /data/vnc_debug.log and /data/vnc_output.log for details")
+        print("VNC output log contents:")
+        try:
+            with open("/data/vnc_output.log", "r") as f:
+                print(f.read())
+        except:
+            print("Could not read VNC output log")
 
     return vnc_port
 
