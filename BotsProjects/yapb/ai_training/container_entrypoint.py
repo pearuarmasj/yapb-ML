@@ -7,7 +7,6 @@ import sys
 import socket
 import random
 import platform
-import hashlib
 
 def get_unique_instance_id():
     """Generate unique instance ID for this container"""
@@ -22,14 +21,12 @@ def get_unique_instance_id():
         return f"bot_{random.randint(1000, 9999)}"
 
 def find_free_vnc_port(start_port=5900, max_port=5950):
-    """Find a free VNC port based on container instance"""
-    # Use a hash of container hostname/instance to get consistent port
-    instance_id = os.environ.get('INSTANCE_ID', f"container_{os.getpid()}")
-    port_offset = int(hashlib.md5(instance_id.encode()).hexdigest()[:4], 16) % 50
-    preferred_port = start_port + port_offset
+    """Find a free VNC port - use PID as offset for uniqueness"""
+    # Use process ID as offset to reduce collisions
+    pid_offset = os.getpid() % 50
+    start_port += pid_offset
     
-    # Try the preferred port first, then scan if needed
-    for port in [preferred_port] + list(range(start_port, max_port + 1)):
+    for port in range(start_port, max_port + 1):
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.settimeout(1)
@@ -39,13 +36,34 @@ def find_free_vnc_port(start_port=5900, max_port=5950):
                 return port
         except:
             continue
-    return start_port  # Fallback to default
+    
+    # If no port found with offset, try from beginning
+    for port in range(5900, max_port + 1):
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(1)
+            result = sock.connect_ex(('127.0.0.1', port))
+            sock.close()
+            if result != 0:  # Port is free
+                return port
+        except:
+            continue
+            
+    return 5900  # Fallback
 
-def start_vnc_server(display, display_num):
+def start_vnc_server(display, display_num):   
     """Start VNC server with proper configuration"""
-    # Find a free VNC port
-    vnc_port = find_free_vnc_port()
-    print(f"Using VNC port: {vnc_port}")
+    # Add startup delay to avoid port conflicts when scaling
+    startup_delay = random.randint(1, 10)
+    print(f"Waiting {startup_delay} seconds to avoid port conflicts...")
+    time.sleep(startup_delay)
+    
+    # Use display number to calculate VNC port (display numbers are unique)
+    vnc_port = 5900 + (display_num - 100)  # Since displays start around 100+
+    if vnc_port < 5900:
+        vnc_port = 5900 + display_num
+    print(f"Display number: {display_num}, VNC port: {vnc_port}")
+    print(f"Using VNC port: {vnc_port} (based on display {display_num})")
     
     # Kill any existing VNC servers first
     subprocess.run(["pkill", "-f", "vnc"], check=False)
