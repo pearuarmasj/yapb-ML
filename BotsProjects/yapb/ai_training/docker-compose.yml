@@ -8,7 +8,7 @@ services:
       - NVIDIA_DRIVER_CAPABILITIES=all
       - BOT_MODE=${BOT_MODE:-collect}
     ports:
-      - "5000-6000"
+      - "5000:6000"
     volumes:
       - ./training_data:/data
       - /tmp/.X11-unix:/tmp/.X11-unix

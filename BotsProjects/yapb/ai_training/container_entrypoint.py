@@ -57,11 +57,8 @@ def start_vnc_server(display, display_num):
     startup_delay = random.randint(1, 10)
     print(f"Waiting {startup_delay} seconds to avoid port conflicts...")
     time.sleep(startup_delay)
-    
-    # Use display number to calculate VNC port (display numbers are unique)
-    vnc_port = 5900 + (display_num - 100)  # Since displays start around 100+
-    if vnc_port < 5900:
-        vnc_port = 5900 + display_num
+      # Use display number to calculate VNC port but keep within forwarded range
+    vnc_port = 5900 + ((display_num - 100) % 50)  # Ensure port stays in 5900-5950 range
     print(f"Display number: {display_num}, VNC port: {vnc_port}")
     print(f"Using VNC port: {vnc_port} (based on display {display_num})")
     
