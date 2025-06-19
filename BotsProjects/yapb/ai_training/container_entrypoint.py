@@ -98,9 +98,8 @@ def start_vnc_server(display, display_num):
             vnc_running = True
         else:
             print("VNC server process not found")
-            
-        # Check if port is listening on all interfaces
-        result = subprocess.run(["ss", "-tlnp"], capture_output=True, text=True)
+              # Check if port is listening on all interfaces
+        result = subprocess.run(["netstat", "-ln"], capture_output=True, text=True)
         if f":{vnc_port}" in result.stdout:
             print(f"VNC port {vnc_port} is listening")
             vnc_running = True
@@ -112,6 +111,20 @@ def start_vnc_server(display, display_num):
             print(f"VNC port {vnc_port} is not listening")
             print("Available listening ports:")
             print(result.stdout)
+            
+        # Also test if we can connect to the port locally
+        try:
+            test_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            test_sock.settimeout(2)
+            test_result = test_sock.connect_ex(('127.0.0.1', vnc_port))
+            test_sock.close()
+            if test_result == 0:
+                print(f"VNC port {vnc_port} is connectable locally")
+                vnc_running = True
+            else:
+                print(f"VNC port {vnc_port} is not connectable locally (error: {test_result})")
+        except Exception as e:
+            print(f"Could not test VNC port connectivity: {e}")
             
     except Exception as e:
         print(f"Could not check VNC status: {e}")
@@ -359,8 +372,7 @@ if __name__ == "__main__":
             print("GPU not available, using CPU rendering")
     except:
         print("nvidia-smi not found, using CPU rendering")
-    
-    # Run the main experiments script with mode from environment
+      # Run the main experiments script with mode from environment
     bot_mode = os.environ.get('BOT_MODE', 'collect')
     print(f"Starting bot in mode: {bot_mode}")
     
@@ -374,6 +386,9 @@ if __name__ == "__main__":
                 print(f"VNC server still running... Check logs at /data/vnc_output.log")
         except KeyboardInterrupt:
             print("Container shutting down...")
+    elif bot_mode == 'collect':
+        print("Data collection mode: Starting ML data collection")
+        run_data_collection()
     else:
-        # Run the experiments
-        subprocess.run(['python3', '/app/container_experiments.py', bot_mode], cwd='/app')
+        print(f"Unknown mode: {bot_mode}, running data collection anyway")
+        run_data_collection()
