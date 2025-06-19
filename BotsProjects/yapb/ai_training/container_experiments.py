@@ -13,6 +13,10 @@ import pickle
 import os
 import sys
 import subprocess
+import json
+import threading
+import socket
+from datetime import datetime
 
 # Disable pyautogui display requirements
 if os.environ.get('PYAUTOGUI_DISABLE_DISPLAY'):
@@ -49,10 +53,13 @@ def find_game_window():
     return [("dummy", "AssaultCube")]
 
 class CS16Env:
-    def __init__(self, region=None, target_window=None):
+    def __init__(self, region=None, target_window=None, instance_id=None, enable_map_sync=True):
         self.region = region
         self.target_window = target_window
         self.target_hwnd = None
+        self.instance_id = instance_id or os.environ.get('INSTANCE_ID', 'default')
+        self.enable_map_sync = enable_map_sync
+        self.current_map = None
         
         game_windows = find_game_window()
         print(f"Found {len(game_windows)} game windows: {game_windows}")
@@ -76,11 +83,43 @@ class CS16Env:
             ('w','mouse_left'), ('w','mouse_right'),
             ('a','mouse_left'), ('a','mouse_right'),
             ('s','mouse_left'), ('s','mouse_right'),
-            ('d','mouse_left'), ('d','mouse_right')
-        ]
+            ('d','mouse_left'), ('d','mouse_right')        ]
         self.held_keys = set()
         
+        # Initialize map synchronization if enabled
+        if self.enable_map_sync:
+            self.initialize_map_sync()
+        
+    def initialize_map_sync(self):
+        """Initialize map synchronization for this instance"""
+        try:
+            # Detect current map
+            self.current_map = get_current_map()
+            
+            # Send map info to coordinator
+            send_map_info_to_coordinator(self.current_map, self.instance_id)
+              # Ensure we're on the synchronized map
+            ensure_map_synchronization(self.instance_id)
+            
+            print(f"Map synchronization initialized for instance {self.instance_id}")
+        except Exception as e:
+            print(f"Failed to initialize map sync: {e}")
+        
     def reset(self):
+        # Check map synchronization before reset
+        if self.enable_map_sync:
+            try:
+                current_map = get_current_map()
+                if current_map != self.current_map:
+                    print(f"Map change detected: {self.current_map} -> {current_map}")
+                    self.current_map = current_map
+                    send_map_info_to_coordinator(self.current_map, self.instance_id)
+                
+                # Ensure we're still synchronized
+                ensure_map_synchronization(self.instance_id)
+            except Exception as e:
+                print(f"Map sync error during reset: {e}")
+        
         for key in list(self.held_keys):
             try:
                 subprocess.run(['xdotool', 'keyup', key], check=True)
@@ -475,11 +514,169 @@ def save_debug_screenshot(region=None, filename_prefix="debug_screenshot"):
         print(f"Failed to save debug screenshot: {e}")
         return None
 
+def get_current_map():
+    """Attempt to detect current map by taking a screenshot and analyzing it"""
+    try:
+        screenshot = grab_screen()
+        # Simple hash of screenshot to identify map
+        screenshot_hash = hash(screenshot.tobytes())
+        return str(screenshot_hash)[:16]
+    except:
+        return "unknown_map"
+
+def send_map_info_to_coordinator(map_name, instance_id, coordinator_port=9999):
+    """Send current map information to coordinator"""
+    try:
+        coordinator_host = os.environ.get('COORDINATOR_HOST', 'localhost')
+        data = {
+            'instance_id': instance_id,
+            'map_name': map_name,
+            'timestamp': datetime.now().isoformat()
+        }
+        
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.settimeout(5)
+        message = json.dumps(data).encode('utf-8')
+        sock.sendto(message, (coordinator_host, coordinator_port))
+        sock.close()
+        print(f"Sent map info to coordinator: {map_name}")
+        return True
+    except Exception as e:
+        print(f"Failed to send map info to coordinator: {e}")
+        return False
+
+def get_synchronized_map(instance_id, coordinator_port=9999, timeout=30):
+    """Get the synchronized map from coordinator"""
+    try:
+        coordinator_host = os.environ.get('COORDINATOR_HOST', 'localhost')
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.settimeout(timeout)
+        
+        # Request current map
+        request = {
+            'action': 'get_map',
+            'instance_id': instance_id
+        }
+        message = json.dumps(request).encode('utf-8')
+        sock.sendto(message, (coordinator_host, coordinator_port))
+        
+        # Wait for response
+        data, addr = sock.recvfrom(1024)
+        response = json.loads(data.decode('utf-8'))
+        sock.close()
+        
+        return response.get('map_name', 'de_dust2')
+    except Exception as e:
+        print(f"Failed to get synchronized map: {e}")
+        return 'de_dust2'  # Default map
+
+def start_map_coordinator(port=9999):
+    """Start a simple UDP server to coordinate maps between instances"""
+    current_map = None
+    instance_maps = {}
+    
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.bind(('localhost', port))
+    sock.settimeout(1)
+    
+    print(f"Map coordinator started on port {port}")
+    
+    while True:
+        try:
+            data, addr = sock.recvfrom(1024)
+            message = json.loads(data.decode('utf-8'))
+            
+            if message.get('action') == 'get_map':
+                # Send current synchronized map
+                response = {'map_name': current_map or 'de_dust2'}
+                sock.sendto(json.dumps(response).encode('utf-8'), addr)
+            else:
+                # Receive map info from instance
+                instance_id = message.get('instance_id')
+                map_name = message.get('map_name')
+                
+                if instance_id and map_name:
+                    instance_maps[instance_id] = map_name
+                    
+                    # If this is the first map reported, make it the synchronized map
+                    if current_map is None:
+                        current_map = map_name
+                        print(f"Set synchronized map to: {map_name}")
+                    
+                    print(f"Instance {instance_id} reported map: {map_name}")
+        except socket.timeout:
+            continue
+        except Exception as e:
+            print(f"Map coordinator error: {e}")
+            continue
+
+def ensure_map_synchronization(instance_id, target_map=None):
+    """Ensure this instance is on the same map as others"""
+    try:
+        if target_map is None:
+            # Get synchronized map from coordinator
+            target_map = get_synchronized_map(instance_id)
+        
+        current_map = get_current_map()
+        print(f"Current map: {current_map}, Target map: {target_map}")
+        
+        if current_map != target_map:
+            print(f"Map mismatch detected. Attempting to synchronize to: {target_map}")
+            
+            # Send console commands to change map
+            change_assaultcube_map(target_map)
+            
+            # Wait for map change
+            time.sleep(5)
+            
+            # Verify map change
+            new_map = get_current_map()
+            if new_map == target_map:
+                print("Map synchronization successful")
+                return True
+            else:
+                print("Map synchronization failed")
+                return False
+        else:
+            print("Already on correct map")
+            return True
+            
+    except Exception as e:
+        print(f"Map synchronization error: {e}")
+        return False
+
+def change_assaultcube_map(map_name):
+    """Send console command to change map in AssaultCube"""
+    try:
+        # Use xdotool to send console commands (Linux approach)
+        subprocess.run(['xdotool', 'key', 'grave'], check=True)  # Open console
+        time.sleep(0.5)
+        subprocess.run(['xdotool', 'type', f'map {map_name}'], check=True)
+        subprocess.run(['xdotool', 'key', 'Return'], check=True)
+        time.sleep(0.5)
+        subprocess.run(['xdotool', 'key', 'grave'], check=True)  # Close console
+        print(f"Sent map change command: map {map_name}")
+    except Exception as e:
+        print(f"Failed to change map: {e}")
+
 if __name__ == "__main__":
+    # Check if we should start the map coordinator
+    if "--coordinator" in sys.argv:
+        print("Starting map coordinator...")
+        start_map_coordinator()
+        sys.exit(0)
+    
     # Check for command line arguments first
     if len(sys.argv) > 1:
         mode = sys.argv[1]
         if mode == "collect":
+            # Start coordinator if not already running
+            try:
+                coordinator_thread = threading.Thread(target=start_map_coordinator, daemon=True)
+                coordinator_thread.start()
+                time.sleep(2)  # Give coordinator time to start
+            except:
+                pass
             collect_assaultcube_data()
             sys.exit(0)
         elif mode == "train":
@@ -489,6 +686,11 @@ if __name__ == "__main__":
             print("Starting data collection and training...")
             import threading
             import time
+            
+            # Start map coordinator
+            coordinator_thread = threading.Thread(target=start_map_coordinator, daemon=True)
+            coordinator_thread.start()
+            time.sleep(2)
             
             # Start data collection in background
             collection_thread = threading.Thread(target=collect_assaultcube_data)
@@ -511,9 +713,14 @@ if __name__ == "__main__":
             else:
                 print("No predefined region - using full screen")
                 region = {"left": 0, "top": 0, "width": 1920, "height": 1080}
-                
-            print(f"Region selected: {region}")
+                print(f"Region selected: {region}")
             collector = AssaultCubeDataCollector(region=region, data_dir=config['data_dir'])
+            
+            # Enable map synchronization for the collector's environment
+            if hasattr(collector, 'game_env'):
+                collector.game_env.enable_map_sync = True
+                collector.game_env.instance_id = config['instance_id']
+                collector.game_env.initialize_map_sync()
             
             print("Starting data collection...")
             obs = collector.reset()
