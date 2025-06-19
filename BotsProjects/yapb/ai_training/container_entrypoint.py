@@ -247,31 +247,48 @@ def start_assaultcube(display_num):
     private_dir = f"{ac_home}/private"
     
     os.makedirs(config_dir, exist_ok=True)
-    os.makedirs(private_dir, exist_ok=True)
-      # Create missing auth config file
+    os.makedirs(private_dir, exist_ok=True)    # Create missing auth config file
     with open(f"{private_dir}/authprivate.cfg", "w") as f:
         f.write("// Auto-generated auth config - disable all authentication\n")
         f.write("authconnect 0\n")
         f.write("autoupdate 0\n")
         f.write("mastermask 0\n")
+        f.write("autogetmap 0\n")
+        f.write("allowmaster 0\n")
     
     # Create entropy file
     with open(f"{private_dir}/entropy.dat", "w") as f:
         f.write("entropy_data_placeholder\n")
     
+    # Create init.cfg to run before anything else
+    init_config = """
+// Init config - runs first
+authconnect 0
+autoupdate 0
+mastermask 0
+autogetmap 0
+allowmaster 0
+showmenu 0
+menuset 0
+map ac_depot
+"""
+    
+    with open(f"{config_dir}/init.cfg", "w") as f:
+        f.write(init_config)
+    
     # Create autoexec config
     config_content = """
 // Auto-generated config - offline mode
-map ac_depot
-sound 0
+authconnect 0
+autoupdate 0
 mastermask 0
 autogetmap 0
 masterconnect 0
 allowmaster 0
-autoupdate 0
-authconnect 0
 showmenu 0
 menuset 0
+sound 0
+map ac_depot
 """
     
     with open(f"{config_dir}/autoexec.cfg", "w") as f:
@@ -280,19 +297,20 @@ menuset 0
     # Create saved.cfg to override default settings
     saved_config = """
 // Saved config - disable all authentication and menus
+authconnect 0
+autoupdate 0
 mastermask 0
 autogetmap 0
 masterconnect 0
 allowmaster 0
-autoupdate 0
-authconnect 0
 showmenu 0
 menuset 0
+sound 0
 """
     
     with open(f"{config_dir}/saved.cfg", "w") as f:
-        f.write(saved_config)
-      # Start AssaultCube with proper environment
+        f.write(saved_config)    
+    # Start AssaultCube with proper environment
     env = os.environ.copy()
     env['LIBGL_ALWAYS_SOFTWARE'] = '0'
     env['NVIDIA_VISIBLE_DEVICES'] = 'all'
@@ -300,31 +318,41 @@ menuset 0
     
     cmd = ["./assaultcube.sh", "--home=/root/.assaultcube/v1.3", "--init"]
     proc = subprocess.Popen(cmd, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    time.sleep(10)
+    time.sleep(15)
     
-    print("AssaultCube started, waiting for initialization...")
+    print("AssaultCube started, aggressively dismissing all prompts...")
     
-    # Auto-dismiss any remaining menus or prompts
-    time.sleep(5)
-    print("Auto-dismissing any remaining menus...")
-    try:
-        # Send Escape key multiple times to dismiss any menus
-        for _ in range(5):
-            subprocess.run(["xdotool", "key", "Escape"], check=False)
-            time.sleep(0.5)
-        
-        # Send Enter to confirm any remaining dialogs
-        subprocess.run(["xdotool", "key", "Return"], check=False)
-        time.sleep(1)
-        
-        # Additional Escape presses to ensure all menus are closed
-        for _ in range(3):
-            subprocess.run(["xdotool", "key", "Escape"], check=False)
-            time.sleep(0.3)
+    # Much more aggressive menu dismissal
+    for attempt in range(10):
+        print(f"Dismissal attempt {attempt + 1}/10...")
+        try:
+            # Press Escape multiple times rapidly
+            for _ in range(10):
+                subprocess.run(["xdotool", "key", "Escape"], check=False)
+                time.sleep(0.1)
             
-        print("Menu dismissal complete")
-    except Exception as e:
-        print(f"Warning: Could not auto-dismiss menus: {e}")
+            # Press Enter to dismiss any auth dialogs
+            for _ in range(5):
+                subprocess.run(["xdotool", "key", "Return"], check=False)
+                time.sleep(0.1)
+            
+            # Press Space to dismiss any other prompts
+            for _ in range(3):
+                subprocess.run(["xdotool", "key", "space"], check=False)
+                time.sleep(0.1)
+            
+            # Try clicking outside any dialogs
+            subprocess.run(["xdotool", "mousemove", "100", "100"], check=False)
+            subprocess.run(["xdotool", "click", "1"], check=False)
+            
+            time.sleep(2)
+            
+        except Exception as e:
+            print(f"Warning: Could not dismiss menus in attempt {attempt + 1}: {e}")
+        
+        time.sleep(1)
+    
+    print("Menu dismissal complete - game should be ready")
 
 def run_data_collection():
     """Run data collection script"""
