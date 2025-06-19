@@ -7,6 +7,7 @@ import sys
 import socket
 import random
 import platform
+import hashlib
 
 def get_unique_instance_id():
     """Generate unique instance ID for this container"""
@@ -23,7 +24,6 @@ def get_unique_instance_id():
 def find_free_vnc_port(start_port=5900, max_port=5950):
     """Find a free VNC port based on container instance"""
     # Use a hash of container hostname/instance to get consistent port
-    import hashlib
     instance_id = os.environ.get('INSTANCE_ID', f"container_{os.getpid()}")
     port_offset = int(hashlib.md5(instance_id.encode()).hexdigest()[:4], 16) % 50
     preferred_port = start_port + port_offset
@@ -189,7 +189,8 @@ def start_xvfb():
 
     print(f"VNC connection info saved to /data/vnc_info_{instance_id}.txt")
     print(f"Container IP: {container_ip}")
-    print(f"Connect with VNC viewer to: localhost:{vnc_port} (from host)")
+    print(f"Internal VNC port: {vnc_port}")
+    print(f"Use 'docker port <container_name> {vnc_port}' to find host port")
     return display_num
     
 def start_assaultcube(display_num):
