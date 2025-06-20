@@ -90,9 +90,11 @@ class CS16Env:
             ('w','mouse_left'), ('w','mouse_right'),
             ('a','mouse_left'), ('a','mouse_right'),
             ('s','mouse_left'), ('s','mouse_right'),
-            ('d','mouse_left'), ('d','mouse_right')        ]
+            ('d','mouse_left'), ('d','mouse_right')
+        ]
         self.held_keys = set()
-          # Initialize map synchronization if enabled
+        
+        # Initialize map synchronization if enabled
         if self.enable_map_sync:
             print(f"Map synchronization enabled for instance {self.instance_id}")
             self.initialize_map_sync()
@@ -101,22 +103,40 @@ class CS16Env:
         
     def _should_enable_map_sync(self):
         """Determine if map synchronization should be enabled based on environment"""
-        # Check if we're in a multi-container setup
+        # Only enable map sync if explicitly configured for multi-instance setup
         coordinator_host = os.environ.get('COORDINATOR_HOST')
+        
+        # Skip map sync if we're in single-instance mode
+        bot_mode = os.environ.get('BOT_MODE', '').lower()
+        if bot_mode == 'vnc':
+            print("VNC mode detected, assuming single-instance setup")
+            return False
+        
         if coordinator_host and coordinator_host != 'localhost':
-            # We have a dedicated coordinator, likely multi-container setup
-            return True
+            # Test if coordinator is actually reachable
+            try:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                sock.settimeout(1)  # Short timeout for quick detection
+                test_msg = json.dumps({'action': 'ping'}).encode('utf-8')
+                sock.sendto(test_msg, (coordinator_host, 9999))
+                
+                # Wait for response
+                sock.settimeout(2)
+                data, addr = sock.recvfrom(1024)
+                response = json.loads(data.decode('utf-8'))
+                sock.close()
+                
+                if response.get('status') == 'alive':
+                    print(f"Coordinator at {coordinator_host} is reachable")
+                    return True
+                else:
+                    print(f"Coordinator at {coordinator_host} responded but not alive")
+                    return False
+            except Exception as e:
+                print(f"Coordinator at {coordinator_host} not reachable: {e}")
+                return False
         
-        # Check if there are multiple instance files in the data directory
-        try:
-            data_dir = os.environ.get('DATA_DIR', '/data')
-            vnc_files = [f for f in os.listdir(data_dir) if f.startswith('vnc_info_') and f.endswith('.txt')]
-            if len(vnc_files) > 1:
-                return True
-        except:
-            pass
-        
-        # Default to single instance mode (no map sync)
+        print("No coordinator configured, single-instance mode")
         return False
         
     def initialize_map_sync(self):
@@ -186,6 +206,8 @@ class CS16Env:
         
         if current_wasd and current_wasd not in self.held_keys:
             try:
+                # Focus the AssaultCube window first
+                subprocess.run(['xdotool', 'search', '--name', 'AssaultCube', 'windowactivate'], check=False)
                 subprocess.run(['xdotool', 'keydown', current_wasd], check=True)
                 self.held_keys.add(current_wasd)
                 used_wasd = True
@@ -618,6 +640,10 @@ def start_map_coordinator(port=9999):
             if message.get('action') == 'get_map':
                 # Send current synchronized map
                 response = {'map_name': current_map or 'ac_desert'}  # Default AssaultCube map
+                sock.sendto(json.dumps(response).encode('utf-8'), addr)
+            elif message.get('action') == 'ping':
+                # Respond to ping requests
+                response = {'status': 'alive'}
                 sock.sendto(json.dumps(response).encode('utf-8'), addr)
             else:
                 # Receive map info from instance
