@@ -133,6 +133,12 @@ def start_vnc_server(display, display_num):
 
     return vnc_port
 
+def auto_exec_config():
+    subprocess.Popen([
+        "/opt/assaultcube/assaultcube.sh",
+        "-c", "/opt/assaultcube/config/autoexec.cfg",
+    ])
+
 def start_xvfb():
     """Start virtual display and VNC server"""
     # Generate unique display number based on container process ID and random
@@ -274,8 +280,7 @@ def start_assaultcube(display_num):
     # Create entropy file
     with open(f"{private_dir}/entropy.dat", "w") as f:
         f.write("entropy_data_placeholder\n")
-    
-    # Create init.cfg to run before anything else
+      # Create init.cfg to run before anything else
     init_config = """// Init config - runs first
 showmenu 0
 map ac_depot
@@ -284,16 +289,7 @@ map ac_depot
     with open(f"{config_dir}/init.cfg", "w") as f:
         f.write(init_config)
     
-    # Create autoexec config that loads into a specific map immediately
-    config_content = """// Auto-generated config - offline mode with immediate map load
-showmenu 0
-sound 0
-sleep 100 [ map ac_depot ]
-sleep 200 [ showmenu 0 ]
-"""
-    
-    with open(f"{config_dir}/autoexec.cfg", "w") as f:
-        f.write(config_content)
+    # Skip autoexec.cfg creation - using mounted version from host
     
     # Create saved.cfg to override default settings
     saved_config = """// Saved config - disable all authentication and menus
@@ -318,15 +314,14 @@ sound 0
     env['LIBGL_ALWAYS_SOFTWARE'] = '1'  # Force software rendering to avoid GPU issues
     env['NVIDIA_VISIBLE_DEVICES'] = 'all'
     env['NVIDIA_DRIVER_CAPABILITIES'] = 'all'
-    
-    # Create log files for debugging
+      # Create log files for debugging
     stdout_log = open("/data/assaultcube_stdout.log", "w")
     stderr_log = open("/data/assaultcube_stderr.log", "w")
     
     print("Starting AssaultCube with debugging enabled...")
     
-    # Use the binary directly instead of the shell script to avoid argument issues
-    cmd = ["./bin_unix/linux_64_client"]
+    # Use the shell script with mounted autoexec config
+    cmd = ["/opt/assaultcube/assaultcube.sh", "-c", "/opt/assaultcube/config/autoexec.cfg"]
     print(f"Command: {' '.join(cmd)}")
     
     proc = subprocess.Popen(cmd, env=env, stdout=stdout_log, stderr=stderr_log)

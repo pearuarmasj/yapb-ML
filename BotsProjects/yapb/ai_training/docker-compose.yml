@@ -26,6 +26,7 @@ services:
     volumes:
       - ./training_data:/data
       - /tmp/.X11-unix:/tmp/.X11-unix
+      - /c/Users/pearu/Documents/GitHub/yapb-ML/BotsProjects/yapb/ai_training/autoexec/autoexec.cfg:/opt/assaultcube/config/autoexec.cfg:ro
     deploy:
       resources:
         reservations:
