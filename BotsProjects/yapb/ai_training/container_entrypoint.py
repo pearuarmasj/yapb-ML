@@ -53,11 +53,7 @@ def find_free_vnc_port(start_port=5900, max_port=5950):
 
 def start_vnc_server(display, display_num):   
     """Start VNC server with proper configuration"""
-    # Add startup delay to avoid port conflicts when scaling
-    startup_delay = random.randint(1, 10)
-    print(f"Waiting {startup_delay} seconds to avoid port conflicts...")
-    time.sleep(startup_delay)
-      # Use display number to calculate VNC port but keep within forwarded range
+    # Use display number to calculate VNC port but keep within forwarded range
     vnc_port = 5900 + ((display_num - 100) % 50)  # Ensure port stays in 5900-5950 range
     print(f"Display number: {display_num}, VNC port: {vnc_port}")
     print(f"Using VNC port: {vnc_port} (based on display {display_num})")
@@ -269,29 +265,17 @@ def start_assaultcube(display_num):
     private_dir = f"{ac_home}/private"
     
     os.makedirs(config_dir, exist_ok=True)
-    os.makedirs(private_dir, exist_ok=True)# Create missing auth config file
+    os.makedirs(private_dir, exist_ok=True)    # Create missing auth config file
     with open(f"{private_dir}/authprivate.cfg", "w") as f:
-        f.write("// Auto-generated auth config - disable all authentication\n")
-        f.write("authconnect 0\n")
-        f.write("autoupdate 0\n")
-        f.write("mastermask 0\n")
-        f.write("autogetmap 0\n")
-        f.write("allowmaster 0\n")
+        f.write("// Auto-generated auth config - minimal\n")
     
     # Create entropy file
     with open(f"{private_dir}/entropy.dat", "w") as f:
         f.write("entropy_data_placeholder\n")
-    
-    # Create init.cfg to run before anything else
+      # Create init.cfg to run before anything else
     init_config = """
 // Init config - runs first
-authconnect 0
-autoupdate 0
-mastermask 0
-autogetmap 0
-allowmaster 0
 showmenu 0
-menuset 0
 map ac_depot
 """
     
@@ -300,16 +284,8 @@ map ac_depot
       # Create autoexec config that loads into a specific map immediately
     config_content = """
 // Auto-generated config - offline mode with immediate map load
-authconnect 0
-autoupdate 0
-mastermask 0
-autogetmap 0
-masterconnect 0
-allowmaster 0
 showmenu 0
-menuset 0
 sound 0
-// Force immediate map load
 sleep 100 [ map ac_depot ]
 sleep 200 [ showmenu 0 ]
 """
@@ -320,21 +296,14 @@ sleep 200 [ showmenu 0 ]
     # Create saved.cfg to override default settings
     saved_config = """
 // Saved config - disable all authentication and menus
-authconnect 0
-autoupdate 0
-mastermask 0
-autogetmap 0
-masterconnect 0
-allowmaster 0
 showmenu 0
-menuset 0
+sound 0
 sound 0
 """
     
     with open(f"{config_dir}/saved.cfg", "w") as f:
         f.write(saved_config)
-    
-    # Create server init commands for when we start a map
+      # Create server init commands for when we start a map
     with open(f"{config_dir}/serverinit.cfg", "w") as f:
         f.write("// Server initialization\n")
         f.write("sv_pure 0\n")
@@ -345,7 +314,7 @@ sound 0
     
     # Start AssaultCube with proper environment and capture output for debugging
     env = os.environ.copy()
-    env['LIBGL_ALWAYS_SOFTWARE'] = '0'
+    env['LIBGL_ALWAYS_SOFTWARE'] = '1'  # Force software rendering to avoid GPU issues
     env['NVIDIA_VISIBLE_DEVICES'] = 'all'
     env['NVIDIA_DRIVER_CAPABILITIES'] = 'all'
     
@@ -355,8 +324,8 @@ sound 0
     
     print("Starting AssaultCube with debugging enabled...")
     
-    # Start with a simple command that should work
-    cmd = ["./assaultcube.sh", "--home=/root/.assaultcube/v1.3", "--init", "-x\"map ac_depot\""]
+    # Try the simplest possible command first
+    cmd = ["./assaultcube.sh"]
     print(f"Command: {' '.join(cmd)}")
     
     proc = subprocess.Popen(cmd, env=env, stdout=stdout_log, stderr=stderr_log)
@@ -366,7 +335,7 @@ sound 0
     assaultcube_process = proc
     
     print(f"AssaultCube process started with PID: {proc.pid}")
-    time.sleep(10)  # Give it more time to start up
+    time.sleep(5)  # Give it time to start up
     
     # Check if the process is still running
     if proc.poll() is None:
@@ -393,21 +362,41 @@ sound 0
         except Exception as e:
             print(f"Could not read stderr log: {e}")
         
-        # Try to restart with even simpler command
-        print("Attempting to restart with simpler command...")
+        # Try with xvfb-run to see if that helps
+        print("Attempting to restart with xvfb-run...")
         stdout_log = open("/data/assaultcube_stdout2.log", "w")
         stderr_log = open("/data/assaultcube_stderr2.log", "w")
         
-        cmd = ["./assaultcube.sh", "--home=/root/.assaultcube/v1.3"]
+        cmd = ["xvfb-run", "-a", "./assaultcube.sh"]
         proc = subprocess.Popen(cmd, env=env, stdout=stdout_log, stderr=stderr_log)
         assaultcube_process = proc
-        print(f"Restarted AssaultCube with PID: {proc.pid}")
+        print(f"Restarted AssaultCube with xvfb-run, PID: {proc.pid}")
         time.sleep(10)
         
         if proc.poll() is None:
-            print("AssaultCube restart successful")
+            print("AssaultCube restart with xvfb-run successful")
         else:
-            print(f"AssaultCube restart failed with code: {proc.returncode}")
+            print(f"AssaultCube restart with xvfb-run failed with code: {proc.returncode}")
+            
+            # Show the second set of logs
+            stdout_log.close()
+            stderr_log.close()
+            
+            print("=== XVFB-RUN STDOUT ===")
+            try:
+                with open("/data/assaultcube_stdout2.log", "r") as f:
+                    content = f.read()
+                    print(content if content else "No stdout output")
+            except:
+                pass
+            
+            print("=== XVFB-RUN STDERR ===")
+            try:
+                with open("/data/assaultcube_stderr2.log", "r") as f:
+                    content = f.read()
+                    print(content if content else "No stderr output")
+            except:
+                pass
     
     print("AssaultCube startup sequence complete, checking process status...")
     
