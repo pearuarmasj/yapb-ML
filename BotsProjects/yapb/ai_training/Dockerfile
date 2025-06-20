@@ -38,8 +38,8 @@ RUN apt-get update && apt-get install -y \
 RUN wget -O /tmp/assaultcube.tar.bz2 https://github.com/assaultcube/AC/releases/download/v1.3.0.2/AssaultCube_v1.3.0.2_LockdownEdition_RC1.tar.bz2 \
     && cd /tmp \
     && tar -xjf assaultcube.tar.bz2 \
-    && ls -la /tmp/ \
-    && mv AssaultCube* /opt/assaultcube \
+    && mkdir -p /opt/assaultcube \
+    && mv assaultcube.sh bin_unix bot config demos docs mods packages screenshots server.sh server_wizard.sh source *.md *.html check_install.sh install_*.sh /opt/assaultcube/ \
     && chmod +x /opt/assaultcube/assaultcube.sh \
     && chmod +x /opt/assaultcube/bin_unix/linux_*_client \
     && rm /tmp/assaultcube.tar.bz2
