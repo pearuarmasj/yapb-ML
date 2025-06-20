@@ -36,9 +36,11 @@ RUN apt-get update && apt-get install -y \
 
 # Download and install AssaultCube (heavy layer that rarely changes)
 RUN wget -O /tmp/assaultcube.tar.bz2 https://github.com/assaultcube/AC/releases/download/v1.3.0.2/AssaultCube_v1.3.0.2_LockdownEdition_RC1.tar.bz2 \
-    && mkdir -p /opt/assaultcube \
-    && cd /opt/assaultcube \
-    && tar -xjf /tmp/assaultcube.tar.bz2 \
+    && cd /tmp \
+    && tar -xjf assaultcube.tar.bz2 \
+    && mv AssaultCube_v1.3.0.2 /opt/assaultcube \
+    && chmod +x /opt/assaultcube/assaultcube.sh \
+    && chmod +x /opt/assaultcube/bin_unix/linux_*_client \
     && rm /tmp/assaultcube.tar.bz2
 
 # Install Python packages (medium layer - only changes when requirements change)
@@ -48,6 +50,7 @@ RUN pip3 install gymnasium numpy stable-baselines3 matplotlib opencv-python pyau
 # Copy application code (light layer - changes frequently)
 COPY container_experiments.py /app/
 COPY container_entrypoint.py /app/
+COPY debug_assaultcube.py /app/
 
 WORKDIR /app
 

@@ -269,7 +269,7 @@ def start_assaultcube(display_num):
     private_dir = f"{ac_home}/private"
     
     os.makedirs(config_dir, exist_ok=True)
-    os.makedirs(private_dir, exist_ok=True)    # Create missing auth config file
+    os.makedirs(private_dir, exist_ok=True)# Create missing auth config file
     with open(f"{private_dir}/authprivate.cfg", "w") as f:
         f.write("// Auto-generated auth config - disable all authentication\n")
         f.write("authconnect 0\n")
@@ -297,10 +297,9 @@ map ac_depot
     
     with open(f"{config_dir}/init.cfg", "w") as f:
         f.write(init_config)
-    
-    # Create autoexec config
+      # Create autoexec config that loads into a specific map immediately
     config_content = """
-// Auto-generated config - offline mode
+// Auto-generated config - offline mode with immediate map load
 authconnect 0
 autoupdate 0
 mastermask 0
@@ -310,7 +309,9 @@ allowmaster 0
 showmenu 0
 menuset 0
 sound 0
-map ac_depot
+// Force immediate map load
+sleep 100 [ map ac_depot ]
+sleep 200 [ showmenu 0 ]
 """
     
     with open(f"{config_dir}/autoexec.cfg", "w") as f:
@@ -331,24 +332,96 @@ sound 0
 """
     
     with open(f"{config_dir}/saved.cfg", "w") as f:
-        f.write(saved_config)    
-    # Start AssaultCube with proper environment
+        f.write(saved_config)
+    
+    # Create server init commands for when we start a map
+    with open(f"{config_dir}/serverinit.cfg", "w") as f:
+        f.write("// Server initialization\n")
+        f.write("sv_pure 0\n")
+        f.write("servermotd \"\"\n")
+        f.write("servertag \"\"\n")
+    
+    print("AssaultCube configuration files created")
+    
+    # Start AssaultCube with proper environment and capture output for debugging
     env = os.environ.copy()
     env['LIBGL_ALWAYS_SOFTWARE'] = '0'
     env['NVIDIA_VISIBLE_DEVICES'] = 'all'
     env['NVIDIA_DRIVER_CAPABILITIES'] = 'all'
     
-    cmd = ["./assaultcube.sh", "--home=/root/.assaultcube/v1.3", "--init"]
-    proc = subprocess.Popen(cmd, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    time.sleep(15)
+    # Create log files for debugging
+    stdout_log = open("/data/assaultcube_stdout.log", "w")
+    stderr_log = open("/data/assaultcube_stderr.log", "w")
     
-    print("AssaultCube started, checking if game is running...")
+    print("Starting AssaultCube with debugging enabled...")
     
-    # Check if AssaultCube process is still running
+    # Start with a simple command that should work
+    cmd = ["./assaultcube.sh", "--home=/root/.assaultcube/v1.3", "--init", "-x\"map ac_depot\""]
+    print(f"Command: {' '.join(cmd)}")
+    
+    proc = subprocess.Popen(cmd, env=env, stdout=stdout_log, stderr=stderr_log)
+    
+    # Store the process globally so we can monitor it
+    global assaultcube_process
+    assaultcube_process = proc
+    
+    print(f"AssaultCube process started with PID: {proc.pid}")
+    time.sleep(10)  # Give it more time to start up
+    
+    # Check if the process is still running
+    if proc.poll() is None:
+        print("AssaultCube process is still running")
+    else:
+        print(f"AssaultCube process has exited with code: {proc.returncode}")
+        # Read the logs to see what went wrong
+        stdout_log.close()
+        stderr_log.close()
+        
+        print("=== STDOUT LOG ===")
+        try:
+            with open("/data/assaultcube_stdout.log", "r") as f:
+                stdout_content = f.read()
+                print(stdout_content if stdout_content else "No stdout output")
+        except Exception as e:
+            print(f"Could not read stdout log: {e}")
+        
+        print("=== STDERR LOG ===")
+        try:
+            with open("/data/assaultcube_stderr.log", "r") as f:
+                stderr_content = f.read()
+                print(stderr_content if stderr_content else "No stderr output")
+        except Exception as e:
+            print(f"Could not read stderr log: {e}")
+        
+        # Try to restart with even simpler command
+        print("Attempting to restart with simpler command...")
+        stdout_log = open("/data/assaultcube_stdout2.log", "w")
+        stderr_log = open("/data/assaultcube_stderr2.log", "w")
+        
+        cmd = ["./assaultcube.sh", "--home=/root/.assaultcube/v1.3"]
+        proc = subprocess.Popen(cmd, env=env, stdout=stdout_log, stderr=stderr_log)
+        assaultcube_process = proc
+        print(f"Restarted AssaultCube with PID: {proc.pid}")
+        time.sleep(10)
+        
+        if proc.poll() is None:
+            print("AssaultCube restart successful")
+        else:
+            print(f"AssaultCube restart failed with code: {proc.returncode}")
+    
+    print("AssaultCube startup sequence complete, checking process status...")
+    
+    # More comprehensive process check
     try:
-        result = subprocess.run(["pgrep", "-f", "assaultcube"], capture_output=True, text=True)
+        result = subprocess.run(["pgrep", "-f", "ac_client"], capture_output=True, text=True)
         if result.returncode == 0:
+            print(f"AssaultCube client process found: {result.stdout.strip()}")
+            
+            # Try gentle menu dismissal only if process is running
             print("AssaultCube process found, attempting gentle menu dismissal...")
+            
+            # Wait a bit more for full startup
+            time.sleep(5)
             
             # Much gentler approach - just try to dismiss auth dialog
             for attempt in range(3):
@@ -369,10 +442,61 @@ sound 0
             
             print("Gentle menu dismissal complete")
         else:
-            print("WARNING: AssaultCube process not found after startup")
+            print("WARNING: AssaultCube client process not found after startup")
+            result = subprocess.run(["pgrep", "-f", "assaultcube"], capture_output=True, text=True)
+            if result.returncode == 0:
+                print(f"But found general assaultcube process: {result.stdout.strip()}")
+            else:
+                print("No AssaultCube processes found at all")
     except Exception as e:
         print(f"Could not check AssaultCube process: {e}")
         print("Skipping menu dismissal")
+    
+    # Don't close the log files yet - keep them open for monitoring
+    return proc
+
+def monitor_assaultcube_process(proc):
+    """Monitor AssaultCube process and restart if it dies"""
+    global assaultcube_process
+    
+    while True:
+        if proc is None or proc.poll() is not None:
+            print("AssaultCube process has died, attempting restart...")
+            
+            # Read logs before restart
+            print("=== Last STDOUT ===")
+            try:
+                with open("/data/assaultcube_stdout.log", "r") as f:
+                    content = f.read()
+                    if content:
+                        print(content[-1000:])  # Last 1000 chars
+                    else:
+                        print("No stdout output")
+            except:
+                pass
+            
+            print("=== Last STDERR ===")
+            try:
+                with open("/data/assaultcube_stderr.log", "r") as f:
+                    content = f.read()
+                    if content:
+                        print(content[-1000:])  # Last 1000 chars
+                    else:
+                        print("No stderr output")
+            except:
+                pass
+            
+            # Restart AssaultCube
+            try:
+                display_num = int(os.environ.get('DISPLAY', ':100').replace(':', ''))
+                proc = start_assaultcube(display_num)
+                assaultcube_process = proc
+            except Exception as e:
+                print(f"Failed to restart AssaultCube: {e}")
+                time.sleep(30)  # Wait before next attempt
+                continue
+        
+        time.sleep(30)  # Check every 30 seconds
 
 def run_data_collection():
     """Run data collection script"""
@@ -432,8 +556,11 @@ if __name__ == "__main__":
     instance_id = os.environ['INSTANCE_ID']
     print(f"Container instance ID: {instance_id}")
     
+    # Global variable to track AssaultCube process
+    assaultcube_process = None
+    
     display_num = start_xvfb()
-    start_assaultcube(display_num)
+    assaultcube_process = start_assaultcube(display_num)
     
     # Check GPU availability
     try:
@@ -446,7 +573,8 @@ if __name__ == "__main__":
             print("GPU not available, using CPU rendering")
     except:
         print("nvidia-smi not found, using CPU rendering")
-      # Run the main experiments script with mode from environment
+    
+    # Run the main experiments script with mode from environment
     bot_mode = os.environ.get('BOT_MODE', 'collect')
     print(f"Starting bot in mode: {bot_mode}")
     
@@ -454,15 +582,59 @@ if __name__ == "__main__":
     if bot_mode == 'vnc':
         print("VNC mode: Container will stay running for manual access")
         print("Check /data/vnc_info_*.txt for connection details")
+        print("Starting AssaultCube process monitor...")
+        
+        # Start process monitoring in a separate thread
+        import threading
+        monitor_thread = threading.Thread(target=monitor_assaultcube_process, args=(assaultcube_process,))
+        monitor_thread.daemon = True
+        monitor_thread.start()
+        
         try:
             while True:
                 time.sleep(60)
-                print(f"VNC server still running... Check logs at /data/vnc_output.log")
+                # Check if AssaultCube is still running
+                if assaultcube_process and assaultcube_process.poll() is None:
+                    status = "RUNNING"
+                else:
+                    status = "STOPPED"
+                print(f"VNC server status: RUNNING, AssaultCube status: {status}")
+                print("Check logs at /data/assaultcube_*.log and /data/vnc_output.log")
         except KeyboardInterrupt:
             print("Container shutting down...")
     elif bot_mode == 'collect':
         print("Data collection mode: Starting ML data collection")
-        run_data_collection()
+        
+        # Start process monitoring in a separate thread
+        import threading
+        monitor_thread = threading.Thread(target=monitor_assaultcube_process, args=(assaultcube_process,))
+        monitor_thread.daemon = True
+        monitor_thread.start()
+        
+        # Wait a bit to ensure AssaultCube is stable before starting data collection
+        print("Waiting for AssaultCube to stabilize...")
+        time.sleep(30)
+        
+        if assaultcube_process and assaultcube_process.poll() is None:
+            print("AssaultCube appears stable, starting data collection")
+            run_data_collection()
+        else:
+            print("AssaultCube is not running, cannot start data collection")
+            print("Keeping container alive for debugging...")
+            try:
+                while True:
+                    time.sleep(60)
+                    print("Container still running for debugging...")
+            except KeyboardInterrupt:
+                print("Container shutting down...")
     else:
         print(f"Unknown mode: {bot_mode}, running data collection anyway")
+        
+        # Start process monitoring in a separate thread
+        import threading
+        monitor_thread = threading.Thread(target=monitor_assaultcube_process, args=(assaultcube_process,))
+        monitor_thread.daemon = True
+        monitor_thread.start()
+        
+        time.sleep(30)
         run_data_collection()
