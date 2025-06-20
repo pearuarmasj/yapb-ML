@@ -32,6 +32,13 @@ RUN apt-get update && apt-get install -y \
     fluxbox \
     x11-apps \
     imagemagick \
+    x11-xserver-utils \
+    x11-utils \
+    xinit \
+    libxkbcommon-x11-0 \
+    libx11-dev \
+    libxext-dev \
+    libxtst6 \
     && rm -rf /var/lib/apt/lists/*
 
 # Download and install AssaultCube (heavy layer that rarely changes)
@@ -53,6 +60,7 @@ RUN pip3 install gymnasium numpy stable-baselines3 matplotlib opencv-python pyau
 COPY container_experiments.py /app/
 COPY container_entrypoint.py /app/
 COPY debug_assaultcube.py /app/
+COPY test_keyboard_input.py /app/
 
 WORKDIR /app
 

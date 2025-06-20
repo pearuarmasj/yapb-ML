@@ -22,14 +22,80 @@ from datetime import datetime
 if os.environ.get('PYAUTOGUI_DISABLE_DISPLAY'):
     pass
 
-def move_mouse_relative(x, y):
+# Global error counters for input debugging
+_mouse_error_count = 0
+_key_error_count = 0
+
+def get_assaultcube_window():
+    """Get the AssaultCube window ID"""
     try:
-        if x < 0 or y < 0:
-            subprocess.run(['xdotool', 'mousemove_relative', '--', str(x), str(y)], check=True)
+        result = subprocess.run(['xdotool', 'search', '--onlyvisible', '--class', 'AssaultCube'], 
+                               capture_output=True, text=True, timeout=5)
+        if result.returncode == 0 and result.stdout.strip():
+            return result.stdout.strip().split('\n')[0]
+    except Exception as e:
+        print(f"Failed to find AssaultCube window: {e}")
+    return None
+
+def move_mouse_relative(x, y):
+    """Move mouse relative to current position, targeting AssaultCube window"""
+    global _mouse_error_count
+    try:
+        window_id = get_assaultcube_window()
+        if window_id:
+            # Focus the window first
+            subprocess.run(['xdotool', 'windowfocus', window_id], check=False)
+            # Move mouse relative
+            if x < 0 or y < 0:
+                subprocess.run(['xdotool', 'mousemove_relative', '--', str(x), str(y)], check=True)
+            else:
+                subprocess.run(['xdotool', 'mousemove_relative', str(x), str(y)], check=True)
         else:
-            subprocess.run(['xdotool', 'mousemove_relative', str(x), str(y)], check=True)
-    except:
-        pass
+            # Fallback to global mouse movement
+            if x < 0 or y < 0:
+                subprocess.run(['xdotool', 'mousemove_relative', '--', str(x), str(y)], check=True)
+            else:
+                subprocess.run(['xdotool', 'mousemove_relative', str(x), str(y)], check=True)
+    except Exception as e:
+        _mouse_error_count += 1
+        if _mouse_error_count % 50 == 1:  # Print error every 50 failures
+            print(f"Mouse movement error: {e}")
+
+def send_key_to_window(key, action='key'):
+    """Send keyboard input to AssaultCube window"""
+    global _key_error_count
+    try:
+        window_id = get_assaultcube_window()
+        if window_id:
+            # Focus the window first
+            subprocess.run(['xdotool', 'windowfocus', window_id], check=False)
+            # Send key to specific window
+            subprocess.run(['xdotool', action, '--window', window_id, key], check=True)
+        else:
+            # Fallback to global key sending
+            subprocess.run(['xdotool', action, key], check=True)
+    except Exception as e:
+        _key_error_count += 1
+        if _key_error_count % 50 == 1:  # Print error every 50 failures
+            print(f"Key {action} error for '{key}': {e}")
+
+def send_text_to_window(text):
+    """Send text input to AssaultCube window"""
+    global _key_error_count
+    try:
+        window_id = get_assaultcube_window()
+        if window_id:
+            # Focus the window first
+            subprocess.run(['xdotool', 'windowfocus', window_id], check=False)
+            # Send text to specific window
+            subprocess.run(['xdotool', 'type', '--window', window_id, text], check=True)
+        else:
+            # Fallback to global text sending
+            subprocess.run(['xdotool', 'type', text], check=True)
+    except Exception as e:
+        _key_error_count += 1
+        if _key_error_count % 50 == 1:  # Print error every 50 failures
+            print(f"Text input error for '{text}': {e}")
 
 def grab_screen(region=None):
     if region:
@@ -163,15 +229,14 @@ class CS16Env:
                     print(f"Map change detected: {self.current_map} -> {current_map}")
                     self.current_map = current_map
                     send_map_info_to_coordinator(self.current_map, self.instance_id)
-                
-                # Ensure we're still synchronized
+                  # Ensure we're still synchronized
                 ensure_map_synchronization(self.instance_id)
             except Exception as e:
                 print(f"Map sync error during reset: {e}")
         
         for key in list(self.held_keys):
             try:
-                subprocess.run(['xdotool', 'keyup', key], check=True)
+                send_key_to_window(key, 'keyup')
             except Exception as e:
                 print(f"Failed to release {key}: {e}")
         self.held_keys.clear()
@@ -193,24 +258,32 @@ class CS16Env:
         elif isinstance(action, (tuple, list)):
             if len(action) == 2:
                 current_wasd, mouse = action
-            elif len(action) == 1:
-                current_wasd = action[0]
+            elif len(action) == 1:                current_wasd = action[0]
+        
+        # Debug print every 100 steps
+        if hasattr(self, 'debug_counter'):
+            self.debug_counter += 1
+        else:
+            self.debug_counter = 1
+            
+        if self.debug_counter % 100 == 0:
+            print(f"Action {action} -> WASD: {current_wasd}, Mouse: {mouse}")
         
         for held_key in list(self.held_keys):
             if held_key != current_wasd:
                 try:
-                    subprocess.run(['xdotool', 'keyup', held_key], check=True)
+                    send_key_to_window(held_key, 'keyup')
                 except Exception as e:
                     print(f"Failed to release {held_key}: {e}")
                 self.held_keys.remove(held_key)
         
         if current_wasd and current_wasd not in self.held_keys:
             try:
-                # Focus the AssaultCube window first
-                subprocess.run(['xdotool', 'search', '--name', 'AssaultCube', 'windowactivate'], check=False)
-                subprocess.run(['xdotool', 'keydown', current_wasd], check=True)
+                send_key_to_window(current_wasd, 'keydown')
                 self.held_keys.add(current_wasd)
                 used_wasd = True
+                if self.debug_counter % 100 == 0:
+                    print(f"Pressed key: {current_wasd}")
             except Exception as e:
                 print(f"Failed to press {current_wasd}: {e}")
         elif current_wasd:
@@ -703,15 +776,15 @@ def ensure_map_synchronization(instance_id, target_map=None):
 def change_assaultcube_map(map_name):
     """Send console command to change map in AssaultCube"""
     try:
-        # Use xdotool to send console commands (Linux approach)
+        # Use window-targeted keyboard commands
         # AssaultCube uses backquote (`) to open console, not tilde (~)
-        subprocess.run(['xdotool', 'key', 'grave'], check=True)  # Open console
+        send_key_to_window('grave')  # Open console
         time.sleep(0.5)
         # Use correct AssaultCube CubeScript command
-        subprocess.run(['xdotool', 'type', f'map {map_name}'], check=True)
-        subprocess.run(['xdotool', 'key', 'Return'], check=True)
+        send_text_to_window(f'map {map_name}')
+        send_key_to_window('Return')
         time.sleep(0.5)
-        subprocess.run(['xdotool', 'key', 'grave'], check=True)  # Close console
+        send_key_to_window('grave')  # Close console
         print(f"Sent AssaultCube map change command: map {map_name}")
     except Exception as e:
         print(f"Failed to change map: {e}")

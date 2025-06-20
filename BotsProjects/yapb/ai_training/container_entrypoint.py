@@ -58,15 +58,27 @@ def start_vnc_server(display, display_num):
     return vnc_port
 
 def start_xvfb():
-    """Start virtual display and VNC server"""
+    """Start virtual display, window manager, and VNC server"""
     display_num = 100 + (os.getpid() % 100)
     display = f":{display_num}"
     os.environ['DISPLAY'] = display
     
     print(f"Starting Xvfb on display {display}")
-    cmd = ["Xvfb", display, "-screen", "0", "1920x1080x24", "-ac"]
+    # Start Xvfb with proper extensions for input handling
+    cmd = ["Xvfb", display, "-screen", "0", "1920x1080x24", "-ac", "+extension", "RANDR"]
     subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    time.sleep(3)
+    
+    # Start window manager (fluxbox) for proper window focus and input handling  
+    print(f"Starting fluxbox window manager on display {display}")
+    fluxbox_cmd = ["fluxbox", "-display", display]
+    subprocess.Popen(fluxbox_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(2)
+    
+    # Set up X11 input method environment
+    os.environ['XMODIFIERS'] = '@im=none'
+    os.environ['GTK_IM_MODULE'] = 'xim'
+    os.environ['QT_IM_MODULE'] = 'xim'
     
     # Start VNC server
     vnc_port = start_vnc_server(display, display_num)
@@ -104,6 +116,32 @@ def start_assaultcube(display_num):
     global assaultcube_process
     assaultcube_process = proc
     print(f"AssaultCube started with PID: {proc.pid}")
+    
+    # Wait for AssaultCube window to appear
+    time.sleep(5)
+    
+    # Test xdotool functionality
+    try:
+        result = subprocess.run(["xdotool", "search", "--onlyvisible", "--class", "AssaultCube"], 
+                                capture_output=True, text=True, timeout=10)
+        if result.returncode == 0 and result.stdout.strip():
+            window_id = result.stdout.strip().split('\n')[0]
+            print(f"Found AssaultCube window: {window_id}")
+            
+            # Try to focus the window
+            subprocess.run(["xdotool", "windowfocus", window_id], check=False)
+            print("AssaultCube window focused")
+        else:
+            print("AssaultCube window not found by xdotool")
+            # List all windows for debugging
+            all_windows = subprocess.run(["xdotool", "search", "--onlyvisible", "."], 
+                                        capture_output=True, text=True, timeout=5)
+            print(f"All visible windows: {all_windows.stdout}")
+            
+    except subprocess.TimeoutExpired:
+        print("xdotool search timed out")
+    except Exception as e:
+        print(f"xdotool test failed: {e}")
     
     return proc
 
