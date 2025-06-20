@@ -197,23 +197,45 @@ def start_xvfb():
                         break
     except Exception as e:
         print(f"Could not determine container IP: {e}")
-    
-    # Save VNC connection info for user
+      # Save VNC connection info for user
     instance_id = os.environ.get('INSTANCE_ID', get_unique_instance_id())
+    
+    # Try to determine external Docker port mapping
+    external_port = "unknown"
+    try:
+        # Get container ID from hostname or environment
+        container_id = subprocess.run(["hostname"], capture_output=True, text=True).stdout.strip()
+        
+        # Try to find external port mapping using docker port command from inside container
+        # This won't work from inside container, so we'll use a different approach
+        
+        # Alternative: Check if we can determine from environment or Docker API
+        # For now, we'll just save the internal port and container info
+        pass
+    except:
+        pass
+    
     with open(f"/data/vnc_info_{instance_id}.txt", "w") as f:
         f.write(f"=== VNC Connection Information ===\n")
         f.write(f"Instance ID: {instance_id}\n")
+        f.write(f"Container ID: {subprocess.run(['hostname'], capture_output=True, text=True).stdout.strip()}\n")
         f.write(f"Display: {display}\n")
-        f.write(f"VNC Port: {vnc_port}\n")
+        f.write(f"Internal VNC Port: {vnc_port}\n")
         f.write(f"Container IP: {container_ip}\n")
         f.write(f"\n=== Connection Instructions ===\n")
-        f.write(f"From Host Machine:\n")
-        f.write(f"  Use VNC viewer to connect to: localhost:{vnc_port}\n")
-        f.write(f"  (Docker should forward port {vnc_port} to host)\n")
+        f.write(f"AUTOMATED EXTERNAL PORT DISCOVERY:\n")
+        f.write(f"Run this command on your host to get the external port:\n")
+        f.write(f"  docker port $(docker ps -q --filter ancestor=ai_training-bot) {vnc_port}\n")
         f.write(f"\n")
-        f.write(f"From Network:\n")
-        f.write(f"  Use VNC viewer to connect to: {container_ip}:{vnc_port}\n")
-        f.write(f"  (If container IP is accessible from your network)\n")
+        f.write(f"OR use this one-liner to connect directly:\n")
+        f.write(f"  EXTERNAL_PORT=$(docker port $(docker ps -q --filter ancestor=ai_training-bot) {vnc_port} | cut -d: -f2) && echo \"Connect to: localhost:$EXTERNAL_PORT\"\n")
+        f.write(f"\n")
+        f.write(f"Manual Connection:\n")
+        f.write(f"  1. Find external port: docker port <container_name> {vnc_port}\n")
+        f.write(f"  2. Connect VNC viewer to: localhost:<external_port>\n")
+        f.write(f"\n")
+        f.write(f"Direct Container Access (if networking allows):\n")
+        f.write(f"  VNC to: {container_ip}:{vnc_port}\n")
         f.write(f"\n")
         f.write(f"VNC Viewer Examples:\n")
         f.write(f"  - TigerVNC, RealVNC, TightVNC\n")
