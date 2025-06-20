@@ -53,12 +53,19 @@ def find_game_window():
     return [("dummy", "AssaultCube")]
 
 class CS16Env:
-    def __init__(self, region=None, target_window=None, instance_id=None, enable_map_sync=True):
+    def __init__(self, region=None, target_window=None, instance_id=None, enable_map_sync=None):
         self.region = region
         self.target_window = target_window
         self.target_hwnd = None
         self.instance_id = instance_id or os.environ.get('INSTANCE_ID', 'default')
-        self.enable_map_sync = enable_map_sync
+        
+        # Auto-detect if map sync should be enabled based on environment
+        if enable_map_sync is None:
+            # Only enable map sync if we're in a multi-instance setup
+            self.enable_map_sync = self._should_enable_map_sync()
+        else:
+            self.enable_map_sync = enable_map_sync
+        
         self.current_map = None
         
         game_windows = find_game_window()
@@ -85,10 +92,32 @@ class CS16Env:
             ('s','mouse_left'), ('s','mouse_right'),
             ('d','mouse_left'), ('d','mouse_right')        ]
         self.held_keys = set()
-        
-        # Initialize map synchronization if enabled
+          # Initialize map synchronization if enabled
         if self.enable_map_sync:
+            print(f"Map synchronization enabled for instance {self.instance_id}")
             self.initialize_map_sync()
+        else:
+            print(f"Map synchronization disabled for single-instance setup")
+        
+    def _should_enable_map_sync(self):
+        """Determine if map synchronization should be enabled based on environment"""
+        # Check if we're in a multi-container setup
+        coordinator_host = os.environ.get('COORDINATOR_HOST')
+        if coordinator_host and coordinator_host != 'localhost':
+            # We have a dedicated coordinator, likely multi-container setup
+            return True
+        
+        # Check if there are multiple instance files in the data directory
+        try:
+            data_dir = os.environ.get('DATA_DIR', '/data')
+            vnc_files = [f for f in os.listdir(data_dir) if f.startswith('vnc_info_') and f.endswith('.txt')]
+            if len(vnc_files) > 1:
+                return True
+        except:
+            pass
+        
+        # Default to single instance mode (no map sync)
+        return False
         
     def initialize_map_sync(self):
         """Initialize map synchronization for this instance"""
@@ -565,10 +594,10 @@ def get_synchronized_map(instance_id, coordinator_port=9999, timeout=30):
         response = json.loads(data.decode('utf-8'))
         sock.close()
         
-        return response.get('map_name', 'de_dust2')
+        return response.get('map_name', 'ac_desert')  # Default AssaultCube map
     except Exception as e:
         print(f"Failed to get synchronized map: {e}")
-        return 'de_dust2'  # Default map
+        return 'ac_desert'  # Default AssaultCube map
 
 def start_map_coordinator(port=9999):
     """Start a simple UDP server to coordinate maps between instances"""
@@ -588,7 +617,7 @@ def start_map_coordinator(port=9999):
             
             if message.get('action') == 'get_map':
                 # Send current synchronized map
-                response = {'map_name': current_map or 'de_dust2'}
+                response = {'map_name': current_map or 'ac_desert'}  # Default AssaultCube map
                 sock.sendto(json.dumps(response).encode('utf-8'), addr)
             else:
                 # Receive map info from instance
@@ -649,15 +678,27 @@ def change_assaultcube_map(map_name):
     """Send console command to change map in AssaultCube"""
     try:
         # Use xdotool to send console commands (Linux approach)
+        # AssaultCube uses backquote (`) to open console, not tilde (~)
         subprocess.run(['xdotool', 'key', 'grave'], check=True)  # Open console
         time.sleep(0.5)
+        # Use correct AssaultCube CubeScript command
         subprocess.run(['xdotool', 'type', f'map {map_name}'], check=True)
         subprocess.run(['xdotool', 'key', 'Return'], check=True)
         time.sleep(0.5)
         subprocess.run(['xdotool', 'key', 'grave'], check=True)  # Close console
-        print(f"Sent map change command: map {map_name}")
+        print(f"Sent AssaultCube map change command: map {map_name}")
     except Exception as e:
         print(f"Failed to change map: {e}")
+        
+def get_available_maps():
+    """Get list of available AssaultCube maps"""
+    # Common AssaultCube maps
+    return [
+        'ac_desert', 'ac_depot', 'ac_aqueous', 'ac_arctic', 'ac_complex',
+        'ac_gothic', 'ac_urban', 'ac_ingress', 'ac_mines', 'ac_outpost',
+        'ac_power', 'ac_rattrap', 'ac_scaffold', 'ac_shine', 'ac_snow',
+        'ac_sunset', 'ac_toxic', 'ac_werk'
+    ]
 
 if __name__ == "__main__":
     # Check if we should start the map coordinator
@@ -665,18 +706,31 @@ if __name__ == "__main__":
         print("Starting map coordinator...")
         start_map_coordinator()
         sys.exit(0)
-    
-    # Check for command line arguments first
+      # Check for command line arguments first
     if len(sys.argv) > 1:
         mode = sys.argv[1]
         if mode == "collect":
-            # Start coordinator if not already running
-            try:
-                coordinator_thread = threading.Thread(target=start_map_coordinator, daemon=True)
-                coordinator_thread.start()
-                time.sleep(2)  # Give coordinator time to start
-            except:
-                pass
+            # Only start coordinator if map sync is enabled
+            coordinator_host = os.environ.get('COORDINATOR_HOST')
+            if coordinator_host and coordinator_host != 'localhost':
+                # We have a dedicated coordinator, don't start our own
+                print("Using external coordinator")
+            else:
+                # Check if we should start coordinator for multi-instance setup
+                try:
+                    data_dir = os.environ.get('DATA_DIR', '/data')
+                    vnc_files = [f for f in os.listdir(data_dir) if f.startswith('vnc_info_') and f.endswith('.txt')]
+                    if len(vnc_files) > 1:
+                        print("Multi-instance setup detected, starting coordinator...")
+                        coordinator_thread = threading.Thread(target=start_map_coordinator, daemon=True)
+                        coordinator_thread.start()
+                        time.sleep(2)
+                    else:
+                        print("Single-instance setup detected, skipping coordinator")
+                except Exception as e:
+                    print(f"Could not detect instance count: {e}")
+                    print("Starting without coordinator (single-instance mode)")
+            
             collect_assaultcube_data()
             sys.exit(0)
         elif mode == "train":
@@ -687,10 +741,21 @@ if __name__ == "__main__":
             import threading
             import time
             
-            # Start map coordinator
-            coordinator_thread = threading.Thread(target=start_map_coordinator, daemon=True)
-            coordinator_thread.start()
-            time.sleep(2)
+            # Only start coordinator if needed for multi-instance setup
+            coordinator_host = os.environ.get('COORDINATOR_HOST')
+            if not coordinator_host or coordinator_host == 'localhost':
+                try:
+                    data_dir = os.environ.get('DATA_DIR', '/data')
+                    vnc_files = [f for f in os.listdir(data_dir) if f.startswith('vnc_info_') and f.endswith('.txt')]
+                    if len(vnc_files) > 1:
+                        print("Multi-instance setup detected, starting coordinator...")
+                        coordinator_thread = threading.Thread(target=start_map_coordinator, daemon=True)
+                        coordinator_thread.start()
+                        time.sleep(2)
+                    else:
+                        print("Single-instance setup, skipping coordinator")
+                except:
+                    print("Starting without coordinator (single-instance mode)")
             
             # Start data collection in background
             collection_thread = threading.Thread(target=collect_assaultcube_data)
@@ -714,14 +779,10 @@ if __name__ == "__main__":
                 print("No predefined region - using full screen")
                 region = {"left": 0, "top": 0, "width": 1920, "height": 1080}
                 print(f"Region selected: {region}")
+            
             collector = AssaultCubeDataCollector(region=region, data_dir=config['data_dir'])
             
-            # Enable map synchronization for the collector's environment
-            if hasattr(collector, 'game_env'):
-                collector.game_env.enable_map_sync = True
-                collector.game_env.instance_id = config['instance_id']
-                collector.game_env.initialize_map_sync()
-            
+            # Map synchronization is now auto-detected by the CS16Env constructor
             print("Starting data collection...")
             obs = collector.reset()
             total_samples = 10000
