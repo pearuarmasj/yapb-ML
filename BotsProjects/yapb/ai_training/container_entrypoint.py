@@ -342,39 +342,37 @@ sound 0
     proc = subprocess.Popen(cmd, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(15)
     
-    print("AssaultCube started, aggressively dismissing all prompts...")
+    print("AssaultCube started, checking if game is running...")
     
-    # Much more aggressive menu dismissal
-    for attempt in range(10):
-        print(f"Dismissal attempt {attempt + 1}/10...")
-        try:
-            # Press Escape multiple times rapidly
-            for _ in range(10):
-                subprocess.run(["xdotool", "key", "Escape"], check=False)
-                time.sleep(0.1)
+    # Check if AssaultCube process is still running
+    try:
+        result = subprocess.run(["pgrep", "-f", "assaultcube"], capture_output=True, text=True)
+        if result.returncode == 0:
+            print("AssaultCube process found, attempting gentle menu dismissal...")
             
-            # Press Enter to dismiss any auth dialogs
-            for _ in range(5):
-                subprocess.run(["xdotool", "key", "Return"], check=False)
-                time.sleep(0.1)
+            # Much gentler approach - just try to dismiss auth dialog
+            for attempt in range(3):
+                print(f"Gentle dismissal attempt {attempt + 1}/3...")
+                try:
+                    # Try just pressing Enter to dismiss auth dialog
+                    subprocess.run(["xdotool", "key", "Return"], check=False)
+                    time.sleep(1)
+                    
+                    # Single Escape to close any initial menus
+                    subprocess.run(["xdotool", "key", "Escape"], check=False)
+                    time.sleep(2)
+                    
+                except Exception as e:
+                    print(f"Warning: Could not dismiss menus in attempt {attempt + 1}: {e}")
+                
+                time.sleep(2)
             
-            # Press Space to dismiss any other prompts
-            for _ in range(3):
-                subprocess.run(["xdotool", "key", "space"], check=False)
-                time.sleep(0.1)
-            
-            # Try clicking outside any dialogs
-            subprocess.run(["xdotool", "mousemove", "100", "100"], check=False)
-            subprocess.run(["xdotool", "click", "1"], check=False)
-            
-            time.sleep(2)
-            
-        except Exception as e:
-            print(f"Warning: Could not dismiss menus in attempt {attempt + 1}: {e}")
-        
-        time.sleep(1)
-    
-    print("Menu dismissal complete - game should be ready")
+            print("Gentle menu dismissal complete")
+        else:
+            print("WARNING: AssaultCube process not found after startup")
+    except Exception as e:
+        print(f"Could not check AssaultCube process: {e}")
+        print("Skipping menu dismissal")
 
 def run_data_collection():
     """Run data collection script"""
