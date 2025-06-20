@@ -60,7 +60,6 @@ RUN pip3 install gymnasium numpy stable-baselines3 matplotlib opencv-python pyau
 COPY container_experiments.py /app/
 COPY container_entrypoint.py /app/
 COPY debug_assaultcube.py /app/
-COPY test_keyboard_input.py /app/
 
 WORKDIR /app
 
