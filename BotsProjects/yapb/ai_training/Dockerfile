@@ -43,6 +43,7 @@ RUN wget -O /tmp/assaultcube.tar.bz2 https://github.com/assaultcube/AC/releases/
     && chmod +x /opt/assaultcube/assaultcube.sh \
     && chmod +x /opt/assaultcube/bin_unix/linux_*_client \
     && rm /tmp/assaultcube.tar.bz2
+RUN mkdir -p /opt/assaultcube/logs && chmod 777 /opt/assaultcube/logs
 
 # Install Python packages (medium layer - only changes when requirements change)
 COPY requirements.txt /app/requirements.txt
