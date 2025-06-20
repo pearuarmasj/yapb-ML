@@ -700,10 +700,10 @@ def start_map_coordinator(port=9999):
     instance_maps = {}
     
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.bind(('localhost', port))
+    sock.bind(('0.0.0.0', port))  # Bind to all interfaces for container access
     sock.settimeout(1)
     
-    print(f"Map coordinator started on port {port}")
+    print(f"Map coordinator started on port {port}, accessible from all interfaces")
     
     while True:
         try:
@@ -805,7 +805,8 @@ if __name__ == "__main__":
         print("Starting map coordinator...")
         start_map_coordinator()
         sys.exit(0)
-      # Check for command line arguments first
+    
+    # Check for command line arguments first
     if len(sys.argv) > 1:
         mode = sys.argv[1]
         if mode == "collect":
