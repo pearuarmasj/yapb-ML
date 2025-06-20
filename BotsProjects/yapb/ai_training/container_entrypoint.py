@@ -265,25 +265,27 @@ def start_assaultcube(display_num):
     private_dir = f"{ac_home}/private"
     
     os.makedirs(config_dir, exist_ok=True)
-    os.makedirs(private_dir, exist_ok=True)    # Create missing auth config file
+    os.makedirs(private_dir, exist_ok=True)
+    
+    # Create missing auth config file
     with open(f"{private_dir}/authprivate.cfg", "w") as f:
         f.write("// Auto-generated auth config - minimal\n")
     
     # Create entropy file
     with open(f"{private_dir}/entropy.dat", "w") as f:
         f.write("entropy_data_placeholder\n")
-      # Create init.cfg to run before anything else
-    init_config = """
-// Init config - runs first
+    
+    # Create init.cfg to run before anything else
+    init_config = """// Init config - runs first
 showmenu 0
 map ac_depot
 """
     
     with open(f"{config_dir}/init.cfg", "w") as f:
         f.write(init_config)
-      # Create autoexec config that loads into a specific map immediately
-    config_content = """
-// Auto-generated config - offline mode with immediate map load
+    
+    # Create autoexec config that loads into a specific map immediately
+    config_content = """// Auto-generated config - offline mode with immediate map load
 showmenu 0
 sound 0
 sleep 100 [ map ac_depot ]
@@ -294,16 +296,15 @@ sleep 200 [ showmenu 0 ]
         f.write(config_content)
     
     # Create saved.cfg to override default settings
-    saved_config = """
-// Saved config - disable all authentication and menus
+    saved_config = """// Saved config - disable all authentication and menus
 showmenu 0
-sound 0
 sound 0
 """
     
     with open(f"{config_dir}/saved.cfg", "w") as f:
         f.write(saved_config)
-      # Create server init commands for when we start a map
+    
+    # Create server init commands for when we start a map
     with open(f"{config_dir}/serverinit.cfg", "w") as f:
         f.write("// Server initialization\n")
         f.write("sv_pure 0\n")
@@ -317,13 +318,13 @@ sound 0
     env['LIBGL_ALWAYS_SOFTWARE'] = '1'  # Force software rendering to avoid GPU issues
     env['NVIDIA_VISIBLE_DEVICES'] = 'all'
     env['NVIDIA_DRIVER_CAPABILITIES'] = 'all'
-      # Create log files for debugging
+    
+    # Create log files for debugging
     stdout_log = open("/data/assaultcube_stdout.log", "w")
     stderr_log = open("/data/assaultcube_stderr.log", "w")
     
     print("Starting AssaultCube with debugging enabled...")
-    
-    # Try the simplest possible command first - no arguments at all
+      # Try shell script first (original approach), fall back to binary if it fails
     cmd = ["./assaultcube.sh"]
     print(f"Command: {' '.join(cmd)}")
     
@@ -359,29 +360,28 @@ sound 0
                 stderr_content = f.read()
                 print(stderr_content if stderr_content else "No stderr output")
         except Exception as e:
-            print(f"Could not read stderr log: {e}")
-        
-        # Try with xvfb-run to see if that helps
-        print("Attempting to restart with xvfb-run...")
+            print(f"Could not read stderr log: {e}")        # Try with a different approach - use binary with minimal args
+        print("Attempting to restart with minimal arguments...")
         stdout_log = open("/data/assaultcube_stdout2.log", "w")
         stderr_log = open("/data/assaultcube_stderr2.log", "w")
         
-        cmd = ["xvfb-run", "-a", "./assaultcube.sh"]
+        # Try with just basic home directory argument that AC expects
+        cmd = ["./bin_unix/linux_64_client", "-h/root/.assaultcube/v1.3"]
         proc = subprocess.Popen(cmd, env=env, stdout=stdout_log, stderr=stderr_log)
         assaultcube_process = proc
-        print(f"Restarted AssaultCube with xvfb-run, PID: {proc.pid}")
+        print(f"Restarted AssaultCube with minimal args, PID: {proc.pid}")
         time.sleep(10)
         
         if proc.poll() is None:
-            print("AssaultCube restart with xvfb-run successful")
+            print("AssaultCube restart with minimal args successful")
         else:
-            print(f"AssaultCube restart with xvfb-run failed with code: {proc.returncode}")
+            print(f"AssaultCube restart with minimal args failed with code: {proc.returncode}")
             
             # Show the second set of logs
             stdout_log.close()
             stderr_log.close()
             
-            print("=== XVFB-RUN STDOUT ===")
+            print("=== MINIMAL ARGS STDOUT ===")
             try:
                 with open("/data/assaultcube_stdout2.log", "r") as f:
                     content = f.read()
@@ -389,7 +389,7 @@ sound 0
             except:
                 pass
             
-            print("=== XVFB-RUN STDERR ===")
+            print("=== MINIMAL ARGS STDERR ===")
             try:
                 with open("/data/assaultcube_stderr2.log", "r") as f:
                     content = f.read()
@@ -561,22 +561,21 @@ if __name__ == "__main__":
             print("GPU not available, using CPU rendering")
     except:
         print("nvidia-smi not found, using CPU rendering")
-    
-    # Run the main experiments script with mode from environment
+      # Run the main experiments script with mode from environment
     bot_mode = os.environ.get('BOT_MODE', 'collect')
     print(f"Starting bot in mode: {bot_mode}")
+    
+    # Start process monitoring in a separate thread for all modes
+    import threading
+    monitor_thread = threading.Thread(target=monitor_assaultcube_process, args=(assaultcube_process,))
+    monitor_thread.daemon = True
+    monitor_thread.start()
     
     # Keep container running for VNC access
     if bot_mode == 'vnc':
         print("VNC mode: Container will stay running for manual access")
         print("Check /data/vnc_info_*.txt for connection details")
         print("Starting AssaultCube process monitor...")
-        
-        # Start process monitoring in a separate thread
-        import threading
-        monitor_thread = threading.Thread(target=monitor_assaultcube_process, args=(assaultcube_process,))
-        monitor_thread.daemon = True
-        monitor_thread.start()
         
         try:
             while True:
@@ -590,14 +589,9 @@ if __name__ == "__main__":
                 print("Check logs at /data/assaultcube_*.log and /data/vnc_output.log")
         except KeyboardInterrupt:
             print("Container shutting down...")
-    elif bot_mode == 'collect':
+    else:
+        # Default to data collection mode for any other mode
         print("Data collection mode: Starting ML data collection")
-        
-        # Start process monitoring in a separate thread
-        import threading
-        monitor_thread = threading.Thread(target=monitor_assaultcube_process, args=(assaultcube_process,))
-        monitor_thread.daemon = True
-        monitor_thread.start()
         
         # Wait a bit to ensure AssaultCube is stable before starting data collection
         print("Waiting for AssaultCube to stabilize...")
@@ -615,14 +609,3 @@ if __name__ == "__main__":
                     print("Container still running for debugging...")
             except KeyboardInterrupt:
                 print("Container shutting down...")
-    else:
-        print(f"Unknown mode: {bot_mode}, running data collection anyway")
-        
-        # Start process monitoring in a separate thread
-        import threading
-        monitor_thread = threading.Thread(target=monitor_assaultcube_process, args=(assaultcube_process,))
-        monitor_thread.daemon = True
-        monitor_thread.start()
-        
-        time.sleep(30)
-        run_data_collection()
