@@ -324,8 +324,9 @@ sound 0
     stderr_log = open("/data/assaultcube_stderr.log", "w")
     
     print("Starting AssaultCube with debugging enabled...")
-      # Try shell script first (original approach), fall back to binary if it fails
-    cmd = ["./assaultcube.sh"]
+    
+    # Use the binary directly instead of the shell script to avoid argument issues
+    cmd = ["./bin_unix/linux_64_client"]
     print(f"Command: {' '.join(cmd)}")
     
     proc = subprocess.Popen(cmd, env=env, stdout=stdout_log, stderr=stderr_log)
@@ -561,15 +562,10 @@ if __name__ == "__main__":
             print("GPU not available, using CPU rendering")
     except:
         print("nvidia-smi not found, using CPU rendering")
-      # Run the main experiments script with mode from environment
+    
+    # Run the main experiments script with mode from environment
     bot_mode = os.environ.get('BOT_MODE', 'collect')
     print(f"Starting bot in mode: {bot_mode}")
-    
-    # Start process monitoring in a separate thread for all modes
-    import threading
-    monitor_thread = threading.Thread(target=monitor_assaultcube_process, args=(assaultcube_process,))
-    monitor_thread.daemon = True
-    monitor_thread.start()
     
     # Keep container running for VNC access
     if bot_mode == 'vnc':
@@ -577,21 +573,41 @@ if __name__ == "__main__":
         print("Check /data/vnc_info_*.txt for connection details")
         print("Starting AssaultCube process monitor...")
         
-        try:
-            while True:
-                time.sleep(60)
-                # Check if AssaultCube is still running
-                if assaultcube_process and assaultcube_process.poll() is None:
-                    status = "RUNNING"
-                else:
-                    status = "STOPPED"
-                print(f"VNC server status: RUNNING, AssaultCube status: {status}")
-                print("Check logs at /data/assaultcube_*.log and /data/vnc_output.log")
-        except KeyboardInterrupt:
-            print("Container shutting down...")
-    else:
-        # Default to data collection mode for any other mode
+        # Start process monitoring in a separate thread
+        import threading
+        monitor_thread = threading.Thread(target=monitor_assaultcube_process, args=(assaultcube_process,))
+        monitor_thread.daemon = True
+        monitor_thread.start()
+        
+        # Wait for AssaultCube to stabilize, then start ML training
+        print("Waiting for AssaultCube to stabilize before starting ML training...")
+        time.sleep(5)
+        
+        if assaultcube_process and assaultcube_process.poll() is None:
+            print("AssaultCube appears stable, starting ML data collection/training")
+            run_data_collection()
+        else:
+            print("AssaultCube is not running, cannot start ML training")
+            print("Keeping container alive for debugging...")
+            try:
+                while True:
+                    time.sleep(60)
+                    if assaultcube_process and assaultcube_process.poll() is None:
+                        status = "RUNNING"
+                    else:
+                        status = "STOPPED"
+                    print(f"VNC server status: RUNNING, AssaultCube status: {status}")
+                    print("Check logs at /data/assaultcube_*.log and /data/vnc_output.log")
+            except KeyboardInterrupt:
+                print("Container shutting down...")
+    elif bot_mode == 'collect':
         print("Data collection mode: Starting ML data collection")
+        
+        # Start process monitoring in a separate thread
+        import threading
+        monitor_thread = threading.Thread(target=monitor_assaultcube_process, args=(assaultcube_process,))
+        monitor_thread.daemon = True
+        monitor_thread.start()
         
         # Wait a bit to ensure AssaultCube is stable before starting data collection
         print("Waiting for AssaultCube to stabilize...")
@@ -609,3 +625,14 @@ if __name__ == "__main__":
                     print("Container still running for debugging...")
             except KeyboardInterrupt:
                 print("Container shutting down...")
+    else:
+        print(f"Unknown mode: {bot_mode}, running data collection anyway")
+        
+        # Start process monitoring in a separate thread
+        import threading
+        monitor_thread = threading.Thread(target=monitor_assaultcube_process, args=(assaultcube_process,))
+        monitor_thread.daemon = True
+        monitor_thread.start()
+        
+        time.sleep(30)
+        run_data_collection()
