@@ -317,14 +317,13 @@ sound 0
     env['LIBGL_ALWAYS_SOFTWARE'] = '1'  # Force software rendering to avoid GPU issues
     env['NVIDIA_VISIBLE_DEVICES'] = 'all'
     env['NVIDIA_DRIVER_CAPABILITIES'] = 'all'
-    
-    # Create log files for debugging
+      # Create log files for debugging
     stdout_log = open("/data/assaultcube_stdout.log", "w")
     stderr_log = open("/data/assaultcube_stderr.log", "w")
     
     print("Starting AssaultCube with debugging enabled...")
     
-    # Try the simplest possible command first
+    # Try the simplest possible command first - no arguments at all
     cmd = ["./assaultcube.sh"]
     print(f"Command: {' '.join(cmd)}")
     
