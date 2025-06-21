@@ -13,7 +13,7 @@ RUN apt-get update && apt-get install -y \
     x11vnc \
     xdotool \
     wget \
-    unzip \
+    zip \
     libgl1-mesa-glx \
     libglu1-mesa \
     libopenal1 \
@@ -24,6 +24,12 @@ RUN apt-get update && apt-get install -y \
     libsdl2-2.0-0 \
     libsdl2-image-2.0-0 \
     libsdl2-mixer-2.0-0 \
+    libsdl2-dev \
+    libsdl2-image-dev \
+    libsdl2-mixer-dev \
+    libgl1-mesa-dev \
+    libglu1-mesa-dev \
+    libopenal-dev \
     xauth \
     net-tools \
     iputils-ping \
@@ -39,12 +45,17 @@ RUN apt-get update && apt-get install -y \
     libx11-dev \
     libxext-dev \
     libxtst6 \
+    binutils \
+    gdb \
+    rsync \
+    socat \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy user's pre-configured AssaultCube build (light layer - user's local build)
 COPY assaultcube-preconfigured/ /opt/assaultcube/
-RUN chmod +x /opt/assaultcube/assaultcube.sh \
-    && chmod +x /opt/assaultcube/bin_unix/linux_*_client \
+COPY .assaultcube /root/.assaultcube
+RUN chmod +x /opt/assaultcube/assaultcube.sh || true \
+    && find /opt/assaultcube/bin_unix -name "linux_*_client" -exec chmod +x {} \; 2>/dev/null || true \
     && mkdir -p /opt/assaultcube/logs && chmod 777 /opt/assaultcube/logs
 
 # Install Python packages (medium layer - only changes when requirements change)
