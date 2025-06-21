@@ -65,11 +65,13 @@ def load_training_data(data_dir="training_data"):
         return None
     
     all_data = []
-    for filename in os.listdir(data_dir):
-        if filename.endswith('.pkl'):
-            with open(f"{data_dir}/{filename}", 'rb') as f:
-                data = pickle.load(f)
-                all_data.extend(data)
+    for root, dirs, files in os.walk(data_dir):
+        for filename in files:
+            if filename.endswith('.pkl'):
+                filepath = os.path.join(root, filename)
+                with open(filepath, 'rb') as f:
+                    data = pickle.load(f)
+                    all_data.extend(data)
     
     if not all_data:
         print("No training data found!")
