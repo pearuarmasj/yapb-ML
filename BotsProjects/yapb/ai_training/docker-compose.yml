@@ -1,14 +1,4 @@
 services:  
-  coordinator:
-    build: .
-    command: python3 container_experiments.py --coordinator
-    ports:
-      - "9999:9999/udp"
-    volumes:
-      - ./training_data:/data
-    networks:
-      - bot-network
-
   bot:
     build: .
     environment:
@@ -17,11 +7,8 @@ services:
       - NVIDIA_VISIBLE_DEVICES=all
       - NVIDIA_DRIVER_CAPABILITIES=all
       - BOT_MODE=${BOT_MODE:-vnc}
-      - COORDINATOR_HOST=coordinator
     ports:
       - "5900-6000"
-    depends_on:
-      - coordinator
     networks:
       - bot-network
     volumes:
