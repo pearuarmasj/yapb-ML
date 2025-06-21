@@ -135,8 +135,8 @@ def train_offline():
     model = CNNPolicy().to(device)
     optimizer = optim.Adam(model.parameters(), lr=3e-4)
     
-    batch_size = 64
-    num_epochs = 10
+    batch_size = 256
+    num_epochs = 5
     
     dataset = TensorDataset(
         torch.tensor(states),

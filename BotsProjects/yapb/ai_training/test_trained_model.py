@@ -6,7 +6,11 @@ import time
 import mss
 import pydirectinput
 import ctypes
+import os
+import glob
+import re
 from collections import deque
+from datetime import datetime
 
 def move_mouse_relative(x, y):
     ctypes.windll.user32.mouse_event(0x0001, x, y, 0, 0)
@@ -175,15 +179,97 @@ class TrainedBot:
         print(f"Bot completed {step_count} steps in {duration_seconds} seconds")
         print(f"Average value: {total_value / step_count:.4f}")
 
+import glob
+import re
+from datetime import datetime
+
+def find_available_models():
+    """Find all trained model files and extract their details"""
+    model_files = glob.glob("assaultcube_offline_trained_*.pth")
+    models = []
+    
+    for file_path in model_files:
+        filename = os.path.basename(file_path)
+        
+        # Extract details from filename
+        match = re.search(r'batch(\d+)_epochs(\d+)_(\d{8}_\d{6})', filename)
+        if match:
+            batch_size = int(match.group(1))
+            epochs = int(match.group(2))
+            timestamp_str = match.group(3)
+            
+            # Parse timestamp
+            try:
+                timestamp = datetime.strptime(timestamp_str, "%Y%m%d_%H%M%S")
+                
+                # Get file size
+                file_size = os.path.getsize(file_path) / (1024 * 1024)  # MB
+                
+                models.append({
+                    'path': file_path,
+                    'filename': filename,
+                    'batch_size': batch_size,
+                    'epochs': epochs,
+                    'timestamp': timestamp,
+                    'size_mb': file_size
+                })
+            except ValueError:
+                continue
+    
+    # Sort by timestamp (newest first)
+    models.sort(key=lambda x: x['timestamp'], reverse=True)
+    return models
+
+def select_model():
+    """Display available models and let user select one"""
+    models = find_available_models()
+    
+    if not models:
+        print("No trained models found!")
+        print("Train a model first using offline_trainer.py")
+        return None
+    
+    print("Available trained models:")
+    print("=" * 80)
+    
+    for i, model in enumerate(models):
+        print(f"{i+1:2d}. {model['filename']}")
+        print(f"    Batch Size: {model['batch_size']}")
+        print(f"    Epochs: {model['epochs']}")
+        print(f"    Trained: {model['timestamp'].strftime('%Y-%m-%d %H:%M:%S')}")
+        print(f"    Size: {model['size_mb']:.1f} MB")
+        print()
+    
+    while True:
+        try:
+            choice = input(f"Select model (1-{len(models)}) or 'q' to quit: ").strip()
+            if choice.lower() == 'q':
+                return None
+            
+            idx = int(choice) - 1
+            if 0 <= idx < len(models):
+                selected = models[idx]
+                print(f"Selected: {selected['filename']}")
+                return selected['path']
+            else:
+                print(f"Please enter a number between 1 and {len(models)}")
+        except ValueError:
+            print("Please enter a valid number or 'q' to quit")
+
 def main():
     region = {"top": 0, "left": 0, "width": 2560, "height": 1440}
     
+    model_path = select_model()
+    if not model_path:
+        print("No model selected. Exiting.")
+        return
+    
     try:
-        bot = TrainedBot(region=region)
+        bot = TrainedBot(model_path=model_path, region=region)
         bot.run(duration_seconds=300)
     except FileNotFoundError:
-        print("Model file 'assaultcube_offline_trained.pth' not found!")
-        print("Train a model first using offline_trainer.py")
+        print(f"Model file '{model_path}' not found!")
+        print("The file may have been moved or deleted.")
     except Exception as e:
         print(f"Error: {e}")
 
