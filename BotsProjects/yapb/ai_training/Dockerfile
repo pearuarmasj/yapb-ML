@@ -41,16 +41,11 @@ RUN apt-get update && apt-get install -y \
     libxtst6 \
     && rm -rf /var/lib/apt/lists/*
 
-# Download and install AssaultCube (heavy layer that rarely changes)
-RUN wget -O /tmp/assaultcube.tar.bz2 https://github.com/assaultcube/AC/releases/download/v1.3.0.2/AssaultCube_v1.3.0.2_LockdownEdition_RC1.tar.bz2 \
-    && cd /tmp \
-    && tar -xjf assaultcube.tar.bz2 \
-    && mkdir -p /opt/assaultcube \
-    && mv assaultcube.sh bin_unix bot config demos docs mods packages screenshots server.sh server_wizard.sh source *.md *.html check_install.sh install_*.sh /opt/assaultcube/ \
-    && chmod +x /opt/assaultcube/assaultcube.sh \
+# Copy user's pre-configured AssaultCube build (light layer - user's local build)
+COPY assaultcube-preconfigured/ /opt/assaultcube/
+RUN chmod +x /opt/assaultcube/assaultcube.sh \
     && chmod +x /opt/assaultcube/bin_unix/linux_*_client \
-    && rm /tmp/assaultcube.tar.bz2
-RUN mkdir -p /opt/assaultcube/logs && chmod 777 /opt/assaultcube/logs
+    && mkdir -p /opt/assaultcube/logs && chmod 777 /opt/assaultcube/logs
 
 # Install Python packages (medium layer - only changes when requirements change)
 COPY requirements.txt /app/requirements.txt

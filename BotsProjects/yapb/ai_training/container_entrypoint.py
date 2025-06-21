@@ -91,26 +91,16 @@ def start_xvfb():
     return display_num
     
 def start_assaultcube(display_num):
-    """Start AssaultCube using mounted config"""
+    """Start AssaultCube using the pre-configured local build"""
     os.chdir('/opt/assaultcube')
     print(f"Starting AssaultCube on display :{display_num}")
     
-    # Create required directories only
-    ac_home = "/root/.assaultcube/v1.3"
-    private_dir = f"{ac_home}/private"
-    os.makedirs(private_dir, exist_ok=True)
-    
-    # Create minimal required files only
-    with open(f"{private_dir}/authprivate.cfg", "w") as f:
-        f.write("// Auto-generated auth config\n")
-    with open(f"{private_dir}/entropy.dat", "w") as f:
-        f.write("entropy_data\n")
-    
-    # Start AssaultCube with mounted autoexec config
+    # Start AssaultCube with user's pre-configured settings (no config injection)
     env = os.environ.copy()
     env['LIBGL_ALWAYS_SOFTWARE'] = '1'
     
-    cmd = ["/opt/assaultcube/assaultcube.sh", "-c", "/opt/assaultcube/config/autoexec.cfg"]
+    # Launch AssaultCube with its default configuration (user's pre-configured build)
+    cmd = ["/opt/assaultcube/assaultcube.sh"]
     proc = subprocess.Popen(cmd, env=env)
     
     global assaultcube_process
