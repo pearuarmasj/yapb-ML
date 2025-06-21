@@ -176,16 +176,12 @@ class CS16Env:
         elif isinstance(action, (tuple, list)):
             if len(action) == 2:
                 current_wasd, mouse = action
-            elif len(action) == 1:                current_wasd = action[0]
-        
+            elif len(action) == 1:                current_wasd = action[0]        
         # Debug print every 100 steps
         if hasattr(self, 'debug_counter'):
             self.debug_counter += 1
         else:
             self.debug_counter = 1
-            
-        if self.debug_counter % 100 == 0:
-            print(f"Action {action} -> WASD: {current_wasd}, Mouse: {mouse}")
         
         for held_key in list(self.held_keys):
             if held_key != current_wasd:
@@ -200,8 +196,6 @@ class CS16Env:
                 send_key_to_window(current_wasd, 'keydown')
                 self.held_keys.add(current_wasd)
                 used_wasd = True
-                if self.debug_counter % 100 == 0:
-                    print(f"Pressed key: {current_wasd}")
             except Exception as e:
                 print(f"Failed to press {current_wasd}: {e}")
         elif current_wasd:

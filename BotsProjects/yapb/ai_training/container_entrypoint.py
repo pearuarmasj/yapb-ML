@@ -123,8 +123,7 @@ def start_assaultcube(display_num):
     global assaultcube_process
     assaultcube_process = proc
     print(f"AssaultCube started with PID: {proc.pid}")
-    
-    # Monitor AssaultCube output for first few seconds
+      # Monitor AssaultCube output for first few seconds
     print("Monitoring AssaultCube startup...")
     start_time = time.time()
     while time.time() - start_time < 10:
@@ -136,38 +135,42 @@ def start_assaultcube(display_num):
             break
         time.sleep(0.5)
     
-    # Wait for AssaultCube window to appear
-    time.sleep(5)
+    # Wait for AssaultCube window to appear with retries
+    print("Waiting for AssaultCube window...")
+    window_found = False
+    max_retries = 30
+    for attempt in range(max_retries):
+        try:
+            result = subprocess.run(["xdotool", "search", "--onlyvisible", "--class", "AssaultCube"], 
+                                    capture_output=True, text=True, timeout=5)
+            if result.returncode == 0 and result.stdout.strip():
+                window_id = result.stdout.strip().split('\n')[0]
+                print(f"Found AssaultCube window: {window_id}")
+                subprocess.run(["xdotool", "windowfocus", window_id], check=False)
+                print("AssaultCube window focused")
+                window_found = True
+                break
+        except Exception:
+            pass
+        
+        if attempt == 0:
+            print("AssaultCube window not found, waiting...")
+        time.sleep(2)
     
-    # Test xdotool functionality
-    try:
-        result = subprocess.run(["xdotool", "search", "--onlyvisible", "--class", "AssaultCube"], 
-                                capture_output=True, text=True, timeout=10)
-        if result.returncode == 0 and result.stdout.strip():
-            window_id = result.stdout.strip().split('\n')[0]
-            print(f"Found AssaultCube window: {window_id}")
-            
-            # Try to focus the window
-            subprocess.run(["xdotool", "windowfocus", window_id], check=False)
-            print("AssaultCube window focused")
-        else:
-            print("AssaultCube window not found by xdotool")
-            # List all windows for debugging
+    if not window_found:
+        print("AssaultCube window still not found after waiting")
+        try:
             all_windows = subprocess.run(["xdotool", "search", "--onlyvisible", "."], 
                                         capture_output=True, text=True, timeout=5)
             print(f"All visible windows: {all_windows.stdout}")
-            
-    except subprocess.TimeoutExpired:
-        print("xdotool search timed out")
-    except Exception as e:
-        print(f"xdotool test failed: {e}")
+        except Exception:
+            pass
     
     return proc
 
 def send_map_command():
     """Send map command to AssaultCube to set ac_desert for 60 minutes"""
-    print("Sending map command to AssaultCube...")
-    time.sleep(10)  # Wait for AssaultCube to fully load
+    time.sleep(15)  # Wait longer for AssaultCube to fully load
     
     try:
         # Find AssaultCube window
@@ -193,11 +196,8 @@ def send_map_command():
             
             print("Map command sent successfully: /map ac_desert 60")
             
-        else:
-            print("Could not find AssaultCube window for map command")
-            
     except Exception as e:
-        print(f"Failed to send map command: {e}")
+        pass
 
 def check_assaultcube_running(proc):
     """Simple check if AssaultCube is still running"""
