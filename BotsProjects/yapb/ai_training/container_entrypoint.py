@@ -91,18 +91,20 @@ def start_xvfb():
     return display_num
     
 def start_assaultcube(display_num):
-    """Start AssaultCube using the pre-configured local build"""
-    os.chdir('/opt/assaultcube')
+    """Start AssaultCube using the compiled source"""
+    os.chdir('/root/assaultcube')
     print(f"Starting AssaultCube on display :{display_num}")
-      # Start AssaultCube with user's pre-configured settings (no config injection)
+    
+    # Start AssaultCube with user's pre-configured settings (no config injection)
     env = os.environ.copy()
     env['LIBGL_ALWAYS_SOFTWARE'] = '1'
-    env['LIBGL_ALWAYS_INDIRECT'] = '1'
-    env['MESA_GL_VERSION_OVERRIDE'] = '3.3'
-    env['MESA_GLSL_VERSION_OVERRIDE'] = '330'
+    env['LIBGL_ALWAYS_INDIRECT'] = '0'
+    env['MESA_GL_VERSION_OVERRIDE'] = '2.1'
+    env['MESA_GLSL_VERSION_OVERRIDE'] = '120'
     env['GALLIUM_DRIVER'] = 'llvmpipe'
-    env['LP_NUM_THREADS'] = '1'    # Launch AssaultCube with its default configuration (user's pre-configured build)
-    cmd = ["/opt/assaultcube/assaultcube.sh"]
+    env['LP_NUM_THREADS'] = '1'
+      # Launch AssaultCube with its default configuration
+    cmd = ["/root/assaultcube/assaultcube.sh"]
     print(f"Launching AssaultCube with command: {' '.join(cmd)}")
     print(f"Working directory: {os.getcwd()}")
     print(f"Graphics environment: LIBGL_ALWAYS_SOFTWARE={env.get('LIBGL_ALWAYS_SOFTWARE')}")

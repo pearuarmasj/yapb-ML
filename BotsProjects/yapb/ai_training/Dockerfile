@@ -4,9 +4,12 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV DISPLAY=:99
 ENV NVIDIA_VISIBLE_DEVICES=all
 ENV NVIDIA_DRIVER_CAPABILITIES=all
-ENV LIBGL_ALWAYS_INDIRECT=1
+ENV LIBGL_ALWAYS_INDIRECT=0
 ENV LIBGL_ALWAYS_SOFTWARE=1
-ENV MESA_GL_VERSION_OVERRIDE=3.3
+ENV MESA_GL_VERSION_OVERRIDE=2.1
+ENV MESA_GLSL_VERSION_OVERRIDE=120
+ENV GALLIUM_DRIVER=llvmpipe
+ENV LP_NUM_THREADS=1
 
 # Install system packages first (heavy layer that rarely changes)
 RUN apt-get update && apt-get install -y \
@@ -35,6 +38,8 @@ RUN apt-get update && apt-get install -y \
     libgl1-mesa-dev \
     libglu1-mesa-dev \
     libopenal-dev \
+    libogg-dev \
+    libvorbis-dev \
     libdrm2 \
     libxss1 \
     libgconf-2-4 \
@@ -44,7 +49,7 @@ RUN apt-get update && apt-get install -y \
     libatk1.0-0 \
     libcairo-gobject2 \
     libgtk-3-0 \
-    libgdk-pixbuf2.0-0\
+    libgdk-pixbuf2.0-0 \
     xauth \
     net-tools \
     iputils-ping \
@@ -64,14 +69,20 @@ RUN apt-get update && apt-get install -y \
     gdb \
     rsync \
     socat \
+    cmake \
+    git \
+    g++ \
+    gcc \
+    build-essential \
+    clang \
+    make \
+    ninja-build \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy user's pre-configured AssaultCube build (light layer - user's local build)
-COPY assaultcube-preconfigured/ /opt/assaultcube/
+# Build AssaultCube from source
 COPY .assaultcube /root/.assaultcube
-RUN chmod +x /opt/assaultcube/assaultcube.sh || true \
-    && find /opt/assaultcube/bin_unix -name "native_client" -exec chmod +x {} \; 2>/dev/null || true \
-    && mkdir -p /opt/assaultcube/logs && chmod 777 /opt/assaultcube/logs
+COPY build_assaultcube.sh /tmp/build_assaultcube.sh
+RUN chmod +x /tmp/build_assaultcube.sh && /tmp/build_assaultcube.sh && rm /tmp/build_assaultcube.sh
 
 # Install Python packages (medium layer - only changes when requirements change)
 COPY requirements.txt /app/requirements.txt
