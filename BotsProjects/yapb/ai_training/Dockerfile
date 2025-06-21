@@ -55,7 +55,7 @@ RUN apt-get update && apt-get install -y \
 COPY assaultcube-preconfigured/ /opt/assaultcube/
 COPY .assaultcube /root/.assaultcube
 RUN chmod +x /opt/assaultcube/assaultcube.sh || true \
-    && find /opt/assaultcube/bin_unix -name "linux_*_client" -exec chmod +x {} \; 2>/dev/null || true \
+    && find /opt/assaultcube/bin_unix -name "native_client" -exec chmod +x {} \; 2>/dev/null || true \
     && mkdir -p /opt/assaultcube/logs && chmod 777 /opt/assaultcube/logs
 
 # Install Python packages (medium layer - only changes when requirements change)

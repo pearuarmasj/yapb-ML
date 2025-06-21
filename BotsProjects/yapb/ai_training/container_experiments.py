@@ -119,20 +119,11 @@ def find_game_window():
     return [("dummy", "AssaultCube")]
 
 class CS16Env:
-    def __init__(self, region=None, target_window=None, instance_id=None, enable_map_sync=None):
+    def __init__(self, region=None, target_window=None, instance_id=None):
         self.region = region
         self.target_window = target_window
         self.target_hwnd = None
         self.instance_id = instance_id or os.environ.get('INSTANCE_ID', 'default')
-        
-        # Auto-detect if map sync should be enabled based on environment
-        if enable_map_sync is None:
-            # Only enable map sync if we're in a multi-instance setup
-            self.enable_map_sync = self._should_enable_map_sync()
-        else:
-            self.enable_map_sync = enable_map_sync
-        
-        self.current_map = None
         
         game_windows = find_game_window()
         print(f"Found {len(game_windows)} game windows: {game_windows}")
@@ -160,80 +151,7 @@ class CS16Env:
         ]
         self.held_keys = set()
         
-        # Initialize map synchronization if enabled
-        if self.enable_map_sync:
-            print(f"Map synchronization enabled for instance {self.instance_id}")
-            self.initialize_map_sync()
-        else:
-            print(f"Map synchronization disabled for single-instance setup")
-        
-    def _should_enable_map_sync(self):
-        """Determine if map synchronization should be enabled based on environment"""
-        # Only enable map sync if explicitly configured for multi-instance setup
-        coordinator_host = os.environ.get('COORDINATOR_HOST')
-        
-        # Skip map sync if we're in single-instance mode
-        bot_mode = os.environ.get('BOT_MODE', '').lower()
-        if bot_mode == 'vnc':
-            print("VNC mode detected, assuming single-instance setup")
-            return False
-        
-        if coordinator_host and coordinator_host != 'localhost':
-            # Test if coordinator is actually reachable
-            try:
-                sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                sock.settimeout(1)  # Short timeout for quick detection
-                test_msg = json.dumps({'action': 'ping'}).encode('utf-8')
-                sock.sendto(test_msg, (coordinator_host, 9999))
-                
-                # Wait for response
-                sock.settimeout(2)
-                data, addr = sock.recvfrom(1024)
-                response = json.loads(data.decode('utf-8'))
-                sock.close()
-                
-                if response.get('status') == 'alive':
-                    print(f"Coordinator at {coordinator_host} is reachable")
-                    return True
-                else:
-                    print(f"Coordinator at {coordinator_host} responded but not alive")
-                    return False
-            except Exception as e:
-                print(f"Coordinator at {coordinator_host} not reachable: {e}")
-                return False
-        
-        print("No coordinator configured, single-instance mode")
-        return False
-        
-    def initialize_map_sync(self):
-        """Initialize map synchronization for this instance"""
-        try:
-            # Detect current map
-            self.current_map = get_current_map()
-            
-            # Send map info to coordinator
-            send_map_info_to_coordinator(self.current_map, self.instance_id)
-              # Ensure we're on the synchronized map
-            ensure_map_synchronization(self.instance_id)
-            
-            print(f"Map synchronization initialized for instance {self.instance_id}")
-        except Exception as e:
-            print(f"Failed to initialize map sync: {e}")
-        
     def reset(self):
-        # Check map synchronization before reset
-        if self.enable_map_sync:
-            try:
-                current_map = get_current_map()
-                if current_map != self.current_map:
-                    print(f"Map change detected: {self.current_map} -> {current_map}")
-                    self.current_map = current_map
-                    send_map_info_to_coordinator(self.current_map, self.instance_id)
-                  # Ensure we're still synchronized
-                ensure_map_synchronization(self.instance_id)
-            except Exception as e:
-                print(f"Map sync error during reset: {e}")
-        
         for key in list(self.held_keys):
             try:
                 send_key_to_window(key, 'keyup')
@@ -648,150 +566,8 @@ def get_current_map():
     except:
         return "unknown_map"
 
-def send_map_info_to_coordinator(map_name, instance_id, coordinator_port=9999):
-    """Send current map information to coordinator"""
-    try:
-        coordinator_host = os.environ.get('COORDINATOR_HOST', 'localhost')
-        data = {
-            'instance_id': instance_id,
-            'map_name': map_name,
-            'timestamp': datetime.now().isoformat()
-        }
-        
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.settimeout(5)
-        message = json.dumps(data).encode('utf-8')
-        sock.sendto(message, (coordinator_host, coordinator_port))
-        sock.close()
-        print(f"Sent map info to coordinator: {map_name}")
-        return True
-    except Exception as e:
-        print(f"Failed to send map info to coordinator: {e}")
-        return False
-
-def get_synchronized_map(instance_id, coordinator_port=9999, timeout=30):
-    """Get the synchronized map from coordinator"""
-    try:
-        coordinator_host = os.environ.get('COORDINATOR_HOST', 'localhost')
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.settimeout(timeout)
-        
-        # Request current map
-        request = {
-            'action': 'get_map',
-            'instance_id': instance_id
-        }
-        message = json.dumps(request).encode('utf-8')
-        sock.sendto(message, (coordinator_host, coordinator_port))
-        
-        # Wait for response
-        data, addr = sock.recvfrom(1024)
-        response = json.loads(data.decode('utf-8'))
-        sock.close()
-        
-        return response.get('map_name', 'ac_desert')  # Default AssaultCube map
-    except Exception as e:
-        print(f"Failed to get synchronized map: {e}")
-        return 'ac_desert'  # Default AssaultCube map
-
-def start_map_coordinator(port=9999):
-    """Start a simple UDP server to coordinate maps between instances"""
-    current_map = None
-    instance_maps = {}
-    
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.bind(('0.0.0.0', port))  # Bind to all interfaces for container access
-    sock.settimeout(1)
-    
-    print(f"Map coordinator started on port {port}, accessible from all interfaces")
-    
-    while True:
-        try:
-            data, addr = sock.recvfrom(1024)
-            message = json.loads(data.decode('utf-8'))
-            
-            if message.get('action') == 'get_map':
-                # Send current synchronized map
-                response = {'map_name': current_map or 'ac_desert'}  # Default AssaultCube map
-                sock.sendto(json.dumps(response).encode('utf-8'), addr)
-            elif message.get('action') == 'ping':
-                # Respond to ping requests
-                response = {'status': 'alive'}
-                sock.sendto(json.dumps(response).encode('utf-8'), addr)
-            else:
-                # Receive map info from instance
-                instance_id = message.get('instance_id')
-                map_name = message.get('map_name')
-                
-                if instance_id and map_name:
-                    instance_maps[instance_id] = map_name
-                    
-                    # If this is the first map reported, make it the synchronized map
-                    if current_map is None:
-                        current_map = map_name
-                        print(f"Set synchronized map to: {map_name}")
-                    
-                    print(f"Instance {instance_id} reported map: {map_name}")
-        except socket.timeout:
-            continue
-        except Exception as e:
-            print(f"Map coordinator error: {e}")
-            continue
-
-def ensure_map_synchronization(instance_id, target_map=None):
-    """Ensure this instance is on the same map as others"""
-    try:
-        if target_map is None:
-            # Get synchronized map from coordinator
-            target_map = get_synchronized_map(instance_id)
-        
-        current_map = get_current_map()
-        print(f"Current map: {current_map}, Target map: {target_map}")
-        
-        if current_map != target_map:
-            print(f"Map mismatch detected. Attempting to synchronize to: {target_map}")
-            
-            # Send console commands to change map
-            change_assaultcube_map(target_map)
-            
-            # Wait for map change
-            time.sleep(5)
-            
-            # Verify map change
-            new_map = get_current_map()
-            if new_map == target_map:
-                print("Map synchronization successful")
-                return True
-            else:
-                print("Map synchronization failed")
-                return False
-        else:
-            print("Already on correct map")
-            return True
-            
-    except Exception as e:
-        print(f"Map synchronization error: {e}")
-        return False
-
-def change_assaultcube_map(map_name):
-    """Send console command to change map in AssaultCube"""
-    try:
-        # Use window-targeted keyboard commands
-        # AssaultCube uses backquote (`) to open console, not tilde (~)
-        send_key_to_window('grave')  # Open console
-        time.sleep(0.5)
-        # Use correct AssaultCube CubeScript command
-        send_text_to_window(f'map {map_name}')
-        send_key_to_window('Return')
-        time.sleep(0.5)
-        send_key_to_window('grave')  # Close console
-        print(f"Sent AssaultCube map change command: map {map_name}")
-    except Exception as e:
-        print(f"Failed to change map: {e}")
-        
 def get_available_maps():
     """Get list of available AssaultCube maps"""
-    # Common AssaultCube maps
     return [
         'ac_desert', 'ac_depot', 'ac_aqueous', 'ac_arctic', 'ac_complex',
         'ac_gothic', 'ac_urban', 'ac_ingress', 'ac_mines', 'ac_outpost',
@@ -800,37 +576,10 @@ def get_available_maps():
     ]
 
 if __name__ == "__main__":
-    # Check if we should start the map coordinator
-    if "--coordinator" in sys.argv:
-        print("Starting map coordinator...")
-        start_map_coordinator()
-        sys.exit(0)
-    
     # Check for command line arguments first
     if len(sys.argv) > 1:
         mode = sys.argv[1]
         if mode == "collect":
-            # Only start coordinator if map sync is enabled
-            coordinator_host = os.environ.get('COORDINATOR_HOST')
-            if coordinator_host and coordinator_host != 'localhost':
-                # We have a dedicated coordinator, don't start our own
-                print("Using external coordinator")
-            else:
-                # Check if we should start coordinator for multi-instance setup
-                try:
-                    data_dir = os.environ.get('DATA_DIR', '/data')
-                    vnc_files = [f for f in os.listdir(data_dir) if f.startswith('vnc_info_') and f.endswith('.txt')]
-                    if len(vnc_files) > 1:
-                        print("Multi-instance setup detected, starting coordinator...")
-                        coordinator_thread = threading.Thread(target=start_map_coordinator, daemon=True)
-                        coordinator_thread.start()
-                        time.sleep(2)
-                    else:
-                        print("Single-instance setup detected, skipping coordinator")
-                except Exception as e:
-                    print(f"Could not detect instance count: {e}")
-                    print("Starting without coordinator (single-instance mode)")
-            
             collect_assaultcube_data()
             sys.exit(0)
         elif mode == "train":
@@ -840,22 +589,6 @@ if __name__ == "__main__":
             print("Starting data collection and training...")
             import threading
             import time
-            
-            # Only start coordinator if needed for multi-instance setup
-            coordinator_host = os.environ.get('COORDINATOR_HOST')
-            if not coordinator_host or coordinator_host == 'localhost':
-                try:
-                    data_dir = os.environ.get('DATA_DIR', '/data')
-                    vnc_files = [f for f in os.listdir(data_dir) if f.startswith('vnc_info_') and f.endswith('.txt')]
-                    if len(vnc_files) > 1:
-                        print("Multi-instance setup detected, starting coordinator...")
-                        coordinator_thread = threading.Thread(target=start_map_coordinator, daemon=True)
-                        coordinator_thread.start()
-                        time.sleep(2)
-                    else:
-                        print("Single-instance setup, skipping coordinator")
-                except:
-                    print("Starting without coordinator (single-instance mode)")
             
             # Start data collection in background
             collection_thread = threading.Thread(target=collect_assaultcube_data)
