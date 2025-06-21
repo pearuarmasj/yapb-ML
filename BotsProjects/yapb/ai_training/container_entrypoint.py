@@ -8,6 +8,9 @@ import socket
 import random
 import platform
 
+# Global variable to track AssaultCube process
+assaultcube_process = None
+
 def get_unique_instance_id():
     """Generate unique instance ID for this container"""
     try:
@@ -93,21 +96,27 @@ def start_xvfb():
 def start_assaultcube(display_num):
     """Start AssaultCube using the compiled source"""
     os.chdir('/root/assaultcube')
-    print(f"Starting AssaultCube on display :{display_num}")
-    
-    # Start AssaultCube with user's pre-configured settings (no config injection)
+    print(f"Starting AssaultCube on display :{display_num}")    # Start AssaultCube with hardware GPU acceleration
     env = os.environ.copy()
-    env['LIBGL_ALWAYS_SOFTWARE'] = '1'
-    env['LIBGL_ALWAYS_INDIRECT'] = '0'
-    env['MESA_GL_VERSION_OVERRIDE'] = '2.1'
-    env['MESA_GLSL_VERSION_OVERRIDE'] = '120'
-    env['GALLIUM_DRIVER'] = 'llvmpipe'
-    env['LP_NUM_THREADS'] = '1'
-      # Launch AssaultCube with its default configuration
-    cmd = ["/root/assaultcube/assaultcube.sh"]
+    
+    # Disable all audio systems comprehensively
+    env['SDL_AUDIODRIVER'] = 'dummy'
+    env['ALSA_DISABLE'] = '1'
+    env['PULSE_DISABLE'] = '1'
+    env['OPENAL_DISABLE'] = '1'
+    env['PULSE_RUNTIME_PATH'] = '/dev/null'
+    env['PULSE_CONFIG_PATH'] = '/dev/null'
+    env['ALSA_CONFIG_PATH'] = '/dev/null'
+    env['ALSA_MIXER_SIMPLE'] = '1'
+    env['SDL_AUDIO_DRIVER'] = 'dummy'
+    env['AUDIODEV'] = '/dev/null'
+    env['ALSA_PCM_CARD'] = 'null'
+    env['ALSA_CTL_CARD'] = 'null'
+      # Launch AssaultCube with wrapper script for complete audio disabling
+    cmd = ["/app/launch_assaultcube.sh", "/root/assaultcube/bin_unix/native_client", "--home=/root/.assaultcube/v1.3", "--init", "-nosound"]
     print(f"Launching AssaultCube with command: {' '.join(cmd)}")
     print(f"Working directory: {os.getcwd()}")
-    print(f"Graphics environment: LIBGL_ALWAYS_SOFTWARE={env.get('LIBGL_ALWAYS_SOFTWARE')}")
+    print(f"Using hardware GPU acceleration")
     
     proc = subprocess.Popen(cmd, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     
@@ -154,6 +163,41 @@ def start_assaultcube(display_num):
         print(f"xdotool test failed: {e}")
     
     return proc
+
+def send_map_command():
+    """Send map command to AssaultCube to set ac_desert for 60 minutes"""
+    print("Sending map command to AssaultCube...")
+    time.sleep(10)  # Wait for AssaultCube to fully load
+    
+    try:
+        # Find AssaultCube window
+        result = subprocess.run(["xdotool", "search", "--onlyvisible", "--class", "AssaultCube"], 
+                                capture_output=True, text=True, timeout=10)
+        if result.returncode == 0 and result.stdout.strip():
+            window_id = result.stdout.strip().split('\n')[0]
+            
+            # Focus the window
+            subprocess.run(["xdotool", "windowfocus", window_id], check=False)
+            time.sleep(1)
+            
+            # Open chat with T key
+            subprocess.run(["xdotool", "key", "t"], check=False)
+            time.sleep(0.5)
+            
+            # Type the map command
+            subprocess.run(["xdotool", "type", "/map ac_desert 60"], check=False)
+            time.sleep(0.5)
+            
+            # Press Enter to execute
+            subprocess.run(["xdotool", "key", "Return"], check=False)
+            
+            print("Map command sent successfully: /map ac_desert 60")
+            
+        else:
+            print("Could not find AssaultCube window for map command")
+            
+    except Exception as e:
+        print(f"Failed to send map command: {e}")
 
 def check_assaultcube_running(proc):
     """Simple check if AssaultCube is still running"""
@@ -209,19 +253,18 @@ def run_data_collection():
 
 if __name__ == "__main__":
     print("Starting container...")
-    
-    # Set unique instance ID if not already set
+      # Set unique instance ID if not already set
     if 'INSTANCE_ID' not in os.environ:
         os.environ['INSTANCE_ID'] = get_unique_instance_id()
     
     instance_id = os.environ['INSTANCE_ID']
     print(f"Container instance ID: {instance_id}")
     
-    # Global variable to track AssaultCube process
-    assaultcube_process = None
-    
     display_num = start_xvfb()
     assaultcube_process = start_assaultcube(display_num)
+    
+    # Send map command to set ac_desert for 60 minutes
+    send_map_command()
     
     # Run the main experiments script with mode from environment
     bot_mode = os.environ.get('BOT_MODE', 'collect')
