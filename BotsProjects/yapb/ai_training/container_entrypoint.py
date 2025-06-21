@@ -16,12 +16,15 @@ def get_unique_instance_id():
     try:
         # Use hostname if available
         hostname = platform.node()
-        # Add a random component to ensure uniqueness
+        # Add timestamp and random component to ensure uniqueness
+        timestamp = int(time.time() * 1000) % 10000  # Last 4 digits of milliseconds
         rand_id = random.randint(1000, 9999)
-        return f"{hostname}_{rand_id}"
+        return f"{hostname}_{timestamp}_{rand_id}"
     except:
-        # Fallback to just random ID
-        return f"bot_{random.randint(1000, 9999)}"
+        # Fallback to timestamp + random ID
+        timestamp = int(time.time() * 1000) % 10000
+        rand_id = random.randint(1000, 9999)
+        return f"bot_{timestamp}_{rand_id}"
 
 def find_free_vnc_port(start_port=5900, max_port=5920):
     """Find a free VNC port"""
@@ -221,10 +224,9 @@ def run_data_collection():
         'top': 0, 
         'width': 1920,
         'height': 1080
-    }
-    
+    }    
     data_dir = os.environ.get('DATA_DIR', '/data')
-    instance_id = os.environ.get('INSTANCE_ID', 'container')
+    instance_id = os.environ.get('INSTANCE_ID', get_unique_instance_id())
     
     collector = AssaultCubeDataCollector(
         region=region, 
