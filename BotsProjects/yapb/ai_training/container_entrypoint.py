@@ -52,7 +52,12 @@ def start_vnc_server(display, display_num):
         "-forever",
         "-nopw",
         "-shared",
-        "-bg"
+        "-bg",
+        "-noxdamage",
+        "-noxfixes",
+        "-noshm",
+        "-threads",
+        "-ncache", "10"
     ]
     
     subprocess.Popen(vnc_cmd)
@@ -122,8 +127,7 @@ def start_assaultcube(display_num):
     
     global assaultcube_process
     assaultcube_process = proc
-    print(f"AssaultCube started with PID: {proc.pid}")
-      # Monitor AssaultCube output for first few seconds
+    print(f"AssaultCube started with PID: {proc.pid}")    # Monitor AssaultCube output for first few seconds
     print("Monitoring AssaultCube startup...")
     start_time = time.time()
     while time.time() - start_time < 10:
@@ -135,65 +139,59 @@ def start_assaultcube(display_num):
             break
         time.sleep(0.5)
     
-    # Wait for AssaultCube window to appear with retries
-    print("Waiting for AssaultCube window...")
-    window_found = False
-    max_retries = 30
-    for attempt in range(max_retries):
-        try:
-            result = subprocess.run(["xdotool", "search", "--onlyvisible", "--class", "AssaultCube"], 
-                                    capture_output=True, text=True, timeout=5)
+    # Quick check for window without excessive retries
+    time.sleep(3)
+    try:
+        result = subprocess.run(["xdotool", "search", "--onlyvisible", ".", "--name", ".*"], 
+                                capture_output=True, text=True, timeout=5)
+        if result.stdout.strip():
+            print(f"All windows with names: {result.stdout.strip()}")
+        
+        # Try different window search patterns
+        patterns = ["AssaultCube", "ac_client", "native_client", "Cube"]
+        for pattern in patterns:
+            result = subprocess.run(["xdotool", "search", "--onlyvisible", "--name", pattern], 
+                                    capture_output=True, text=True, timeout=2)
             if result.returncode == 0 and result.stdout.strip():
                 window_id = result.stdout.strip().split('\n')[0]
-                print(f"Found AssaultCube window: {window_id}")
+                print(f"Found window with pattern '{pattern}': {window_id}")
                 subprocess.run(["xdotool", "windowfocus", window_id], check=False)
-                print("AssaultCube window focused")
-                window_found = True
                 break
-        except Exception:
-            pass
-        
-        if attempt == 0:
-            print("AssaultCube window not found, waiting...")
-        time.sleep(2)
-    
-    if not window_found:
-        print("AssaultCube window still not found after waiting")
-        try:
-            all_windows = subprocess.run(["xdotool", "search", "--onlyvisible", "."], 
-                                        capture_output=True, text=True, timeout=5)
-            print(f"All visible windows: {all_windows.stdout}")
-        except Exception:
-            pass
+    except Exception as e:
+        print(f"Window search failed: {e}")
     
     return proc
 
 def send_map_command():
     """Send map command to AssaultCube to set ac_desert for 60 minutes"""
-    time.sleep(15)  # Wait longer for AssaultCube to fully load
+    time.sleep(8)
     
     try:
-        # Find AssaultCube window
-        result = subprocess.run(["xdotool", "search", "--onlyvisible", "--class", "AssaultCube"], 
-                                capture_output=True, text=True, timeout=10)
-        if result.returncode == 0 and result.stdout.strip():
-            window_id = result.stdout.strip().split('\n')[0]
-            
-            # Focus the window
+        # Try multiple window search patterns
+        patterns = [
+            ("--name", "AssaultCube"),
+            ("--name", "ac_client"), 
+            ("--name", "native_client"),
+            ("--class", "AssaultCube"),
+            ("--class", "ac_client")
+        ]
+        
+        window_id = None
+        for search_type, pattern in patterns:
+            result = subprocess.run(["xdotool", "search", "--onlyvisible", search_type, pattern], 
+                                    capture_output=True, text=True, timeout=5)
+            if result.returncode == 0 and result.stdout.strip():
+                window_id = result.stdout.strip().split('\n')[0]
+                break
+        
+        if window_id:
             subprocess.run(["xdotool", "windowfocus", window_id], check=False)
             time.sleep(1)
-            
-            # Open chat with T key
             subprocess.run(["xdotool", "key", "t"], check=False)
             time.sleep(0.5)
-            
-            # Type the map command
             subprocess.run(["xdotool", "type", "/map ac_desert 60"], check=False)
             time.sleep(0.5)
-            
-            # Press Enter to execute
             subprocess.run(["xdotool", "key", "Return"], check=False)
-            
             print("Map command sent successfully: /map ac_desert 60")
             
     except Exception as e:
@@ -236,7 +234,7 @@ def run_data_collection():
     print(f"Container {instance_id} starting data collection...")
     
     obs = collector.reset()
-    total_samples = 10000
+    total_samples = 100000
     
     for step in range(total_samples):
         action = __import__('random').randint(0, 11)
@@ -265,13 +263,12 @@ if __name__ == "__main__":
     
     # Send map command to set ac_desert for 60 minutes
     send_map_command()
-    
-    # Run the main experiments script with mode from environment
+      # Run the main experiments script with mode from environment
     bot_mode = os.environ.get('BOT_MODE', 'collect')
     print(f"Starting bot in mode: {bot_mode}")
     
-    # Wait for AssaultCube to start
-    time.sleep(10)
+    # Brief wait for AssaultCube to start
+    time.sleep(5)
     
     if bot_mode == 'vnc':
         print("VNC mode: Container will stay running for manual access")

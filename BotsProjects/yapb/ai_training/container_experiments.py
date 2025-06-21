@@ -116,7 +116,33 @@ def preprocess(frame, size=(84, 84)):
     return frame.astype(np.uint8)
 
 def find_game_window():
-    return [("dummy", "AssaultCube")]
+    """Find actual AssaultCube window using xdotool"""
+    try:
+        patterns = [
+            ("--name", "AssaultCube"),
+            ("--name", "ac_client"), 
+            ("--name", "native_client"),
+            ("--class", "AssaultCube"),
+            ("--class", "ac_client")
+        ]
+        
+        for search_type, pattern in patterns:
+            result = subprocess.run(["xdotool", "search", "--onlyvisible", search_type, pattern], 
+                                    capture_output=True, text=True, timeout=5)
+            if result.returncode == 0 and result.stdout.strip():
+                window_id = result.stdout.strip().split('\n')[0]
+                # Get window name
+                name_result = subprocess.run(["xdotool", "getwindowname", window_id], 
+                                           capture_output=True, text=True, timeout=2)
+                window_name = name_result.stdout.strip() if name_result.returncode == 0 else "AssaultCube"
+                return [(window_id, window_name)]
+        
+        # If no specific AssaultCube window found, return empty list
+        return []
+        
+    except Exception as e:
+        print(f"Error finding game window: {e}")
+        return []
 
 class CS16Env:
     def __init__(self, region=None, target_window=None, instance_id=None):
@@ -379,7 +405,7 @@ def collect_assaultcube_data():
     save_debug_screenshot(region, "initial_state")
     
     obs = collector.reset()
-    total_samples = 10000
+    total_samples = 100000
     
     for step in range(total_samples):
         action = np.random.randint(0, 12)
@@ -612,7 +638,7 @@ if __name__ == "__main__":
             # Map synchronization is now auto-detected by the CS16Env constructor
             print("Starting data collection...")
             obs = collector.reset()
-            total_samples = 10000
+            total_samples = 100000
             
             for step in range(total_samples):
                 action = np.random.randint(0, 12)
