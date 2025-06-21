@@ -4,6 +4,9 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV DISPLAY=:99
 ENV NVIDIA_VISIBLE_DEVICES=all
 ENV NVIDIA_DRIVER_CAPABILITIES=all
+ENV LIBGL_ALWAYS_INDIRECT=1
+ENV LIBGL_ALWAYS_SOFTWARE=1
+ENV MESA_GL_VERSION_OVERRIDE=3.3
 
 # Install system packages first (heavy layer that rarely changes)
 RUN apt-get update && apt-get install -y \
@@ -16,6 +19,8 @@ RUN apt-get update && apt-get install -y \
     zip \
     libgl1-mesa-glx \
     libglu1-mesa \
+    mesa-utils \
+    mesa-utils-extra \
     libopenal1 \
     libvorbis0a \
     libvorbisfile3 \
@@ -30,6 +35,16 @@ RUN apt-get update && apt-get install -y \
     libgl1-mesa-dev \
     libglu1-mesa-dev \
     libopenal-dev \
+    libdrm2 \
+    libxss1 \
+    libgconf-2-4 \
+    libxrandr2 \
+    libasound2 \
+    libpangocairo-1.0-0 \
+    libatk1.0-0 \
+    libcairo-gobject2 \
+    libgtk-3-0 \
+    libgdk-pixbuf2.0-0\
     xauth \
     net-tools \
     iputils-ping \

@@ -94,18 +94,36 @@ def start_assaultcube(display_num):
     """Start AssaultCube using the pre-configured local build"""
     os.chdir('/opt/assaultcube')
     print(f"Starting AssaultCube on display :{display_num}")
-    
-    # Start AssaultCube with user's pre-configured settings (no config injection)
+      # Start AssaultCube with user's pre-configured settings (no config injection)
     env = os.environ.copy()
     env['LIBGL_ALWAYS_SOFTWARE'] = '1'
-    
-    # Launch AssaultCube with its default configuration (user's pre-configured build)
+    env['LIBGL_ALWAYS_INDIRECT'] = '1'
+    env['MESA_GL_VERSION_OVERRIDE'] = '3.3'
+    env['MESA_GLSL_VERSION_OVERRIDE'] = '330'
+    env['GALLIUM_DRIVER'] = 'llvmpipe'
+    env['LP_NUM_THREADS'] = '1'    # Launch AssaultCube with its default configuration (user's pre-configured build)
     cmd = ["/opt/assaultcube/assaultcube.sh"]
-    proc = subprocess.Popen(cmd, env=env)
+    print(f"Launching AssaultCube with command: {' '.join(cmd)}")
+    print(f"Working directory: {os.getcwd()}")
+    print(f"Graphics environment: LIBGL_ALWAYS_SOFTWARE={env.get('LIBGL_ALWAYS_SOFTWARE')}")
+    
+    proc = subprocess.Popen(cmd, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     
     global assaultcube_process
     assaultcube_process = proc
     print(f"AssaultCube started with PID: {proc.pid}")
+    
+    # Monitor AssaultCube output for first few seconds
+    print("Monitoring AssaultCube startup...")
+    start_time = time.time()
+    while time.time() - start_time < 10:
+        if proc.poll() is not None:
+            print(f"AssaultCube process exited with code: {proc.returncode}")
+            stdout, stderr = proc.communicate()
+            if stdout:
+                print(f"AssaultCube output: {stdout}")
+            break
+        time.sleep(0.5)
     
     # Wait for AssaultCube window to appear
     time.sleep(5)
