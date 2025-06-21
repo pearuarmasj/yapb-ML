@@ -4,7 +4,6 @@ from stable_baselines3 import PPO, DQN
 from stable_baselines3.common.vec_env import DummyVecEnv
 from stable_baselines3.common.evaluation import evaluate_policy
 import matplotlib.pyplot as plt
-import time
 import mss
 import cv2
 import ctypes
@@ -14,9 +13,10 @@ import os
 import sys
 import subprocess
 import json
-import threading
 import socket
 from datetime import datetime
+import threading
+import time
 
 # Disable pyautogui display requirements
 if os.environ.get('PYAUTOGUI_DISABLE_DISPLAY'):
@@ -697,8 +697,6 @@ if __name__ == "__main__":
         train_from_data()
     elif choice == "3":
         print("Starting data collection and training...")
-        import threading
-        import time
         
         # Start data collection in background
         collection_thread = threading.Thread(target=collect_assaultcube_data)
